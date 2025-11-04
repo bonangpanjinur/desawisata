@@ -1,94 +1,114 @@
-// src/store/cartStore.js
-// PERBAIKAN: Menggunakan 'persist' untuk menyimpan keranjang otomatis
-// dan menghapus fungsi hydrate manual.
+/**
+ * LOKASI FILE: src/store/cartStore.js
+ * PERBAIKAN: Mengubah 'export default' menjadi 'export const' agar sesuai
+ * dengan cara file ini diimpor di komponen lain (seperti Header.js).
+ */
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { apiSyncMyCart } from '@/lib/api'; // Import API
+import { useAuthStore } from './authStore'; // PERBAIKAN: Impor bernama
 
-import create from 'zustand';
-import { persist } from 'zustand/middleware'; // 1. Impor persist
+// Helper untuk debounce (menunda eksekusi)
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
-// 2. Bungkus 'create' dengan 'persist'
-const useCartStore = create(
+// Buat fungsi debounced untuk sinkronisasi
+const debouncedSyncCart = debounce(async (cart) => {
+  const { token } = useAuthStore.getState();
+  if (token && cart.length > 0) { // Hanya sync jika login dan keranjang tidak kosong
+    try {
+      // console.log("Debounced Sync: Menyimpan keranjang ke server...", cart);
+      await apiSyncMyCart(cart); // Cukup kirim, tidak perlu menunggu balasan
+    } catch (error) {
+      console.error("Gagal sinkronisasi keranjang (debounced):", error);
+    }
+  }
+}, 1500); // Tunda 1.5 detik setelah aksi terakhir
+
+export const useCartStore = create( // PERBAIKAN: Menjadi 'export const'
   persist(
     (set, get) => ({
-      cart: [], // State keranjang
-
-      // Fungsi hydrate tidak lagi diperlukan, 'persist' menanganinya
-      // hydrate: () => { ... } // DIHAPUS
-
-      // Menambahkan produk ke keranjang
-      addToCart: (product, variation, quantity) => {
+      cart: [],
+      
+      // Aksi untuk menambah item
+      addItem: (product, variation = null, quantity = 1) => {
         const item = {
-          id: variation ? `${product.id}-${variation.id}` : product.id.toString(),
+          id: variation ? `${product.id}_${variation.id}` : `${product.id}_0`,
           productId: product.id,
           name: product.nama_produk,
-          price: variation ? parseFloat(variation.harga) : parseFloat(product.harga_dasar),
-          quantity: parseInt(quantity, 10),
-          image: product.gambar_unggulan?.thumbnail || product.galeri_foto?.[0]?.thumbnail || "https://placehold.co/100x100/f4f4f5/a1a1aa?text=Sadesa",
-          variation: variation ? { id: variation.id, deskripsi: variation.deskripsi } : null,
-          sellerId: product.toko?.id_pedagang, // Pastikan ID pedagang ada di sini
-          toko: product.toko // Simpan info toko
+          price: variation ? variation.harga_variasi : product.harga_dasar,
+          quantity,
+          image: product.gambar_unggulan?.thumbnail || product.galeri_foto?.[0]?.thumbnail || '/placeholder.png',
+          variation: variation ? { id: variation.id, deskripsi: variation.deskripsi_variasi } : null,
+          toko: product.toko, // Simpan info toko
+          sellerId: product.toko.id_pedagang, // Simpan ID pedagang
         };
 
-        set((state) => {
-          const existingItemIndex = state.cart.findIndex((i) => i.id === item.id);
-          let newCart = [...state.cart];
-
-          if (existingItemIndex > -1) {
-            // Update kuantitas jika item sudah ada
-            newCart[existingItemIndex].quantity += item.quantity;
-          } else {
-            // Tambah item baru
-            newCart.push(item);
-          }
-          
-          // 'persist' akan otomatis menyimpan newCart ke localStorage
-          return { cart: newCart };
-        });
-      },
-
-      // Menghapus produk dari keranjang
-      removeFromCart: (itemId) => {
-        set((state) => ({
-          cart: state.cart.filter((item) => item.id !== itemId),
-        }));
-      },
-
-      // Mengubah kuantitas
-      updateQuantity: (itemId, quantity) => {
-        const newQuantity = parseInt(quantity, 10);
-        if (newQuantity <= 0) {
-          // Hapus item jika kuantitas 0 atau kurang
-          get().removeFromCart(itemId);
+        const existingItem = get().cart.find((i) => i.id === item.id);
+        
+        let newCart;
+        if (existingItem) {
+          newCart = get().cart.map((i) =>
+            i.id === item.id ? { ...i, quantity: i.quantity + quantity } : i
+          );
         } else {
-          set((state) => ({
-            cart: state.cart.map((item) =>
-              item.id === itemId ? { ...item, quantity: newQuantity } : item
-            ),
-          }));
+          newCart = [...get().cart, item];
+        }
+        
+        set({ cart: newCart });
+        debouncedSyncCart(newCart); // Panggil debounced sync
+      },
+      
+      // Aksi untuk menghapus item
+      removeItem: (itemId) => {
+        const newCart = get().cart.filter((i) => i.id !== itemId);
+        set({ cart: newCart });
+        debouncedSyncCart(newCart); // Panggil debounced sync
+      },
+      
+      // Aksi untuk update kuantitas
+      updateQuantity: (itemId, quantity) => {
+        if (quantity <= 0) {
+          get().removeItem(itemId); // Hapus jika kuantitas 0
+        } else {
+          const newCart = get().cart.map((i) =>
+            i.id === itemId ? { ...i, quantity } : i
+          );
+          set({ cart: newCart });
+          debouncedSyncCart(newCart); // Panggil debounced sync
         }
       },
-
-      // Mengosongkan keranjang
+      
+      // Aksi untuk mengosongkan keranjang
       clearCart: () => {
         set({ cart: [] });
+        // Tidak perlu panggil debouncedSyncCart, karena authStore akan panggil apiClearMyCart
       },
 
-      // Getter untuk total item (count)
+      // Fungsi helper
+      getTotalPrice: () => {
+        return get().cart.reduce((total, item) => total + item.price * item.quantity, 0);
+      },
+      
       getTotalItems: () => {
         return get().cart.reduce((total, item) => total + item.quantity, 0);
       },
 
-      // Getter untuk total harga
-      getTotalPrice: () => {
-        return get().cart.reduce((total, item) => total + item.price * item.quantity, 0);
-      },
-
-      // Getter untuk mengelompokkan keranjang per penjual
       getCartGroupedBySeller: () => {
         return get().cart.reduce((acc, item) => {
-          const sellerId = item.sellerId || 'toko_tidak_dikenal';
+          const sellerId = item.sellerId || 'toko_lain';
           if (!acc[sellerId]) {
             acc[sellerId] = {
-              toko: item.toko || { nama_toko: 'Toko Tidak Dikenal' },
+              nama_toko: item.toko?.nama_toko || 'Toko Lain',
               items: [],
             };
           }
@@ -98,9 +118,10 @@ const useCartStore = create(
       },
     }),
     {
-      name: 'cart-storage', // Nama key di localStorage
+      name: 'cart-storage', // nama key di localStorage
     }
   )
 );
 
-export default useCartStore;
+// Hapus 'export default'
+
