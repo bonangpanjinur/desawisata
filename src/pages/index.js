@@ -25,6 +25,7 @@ export async function getServerSideProps() {
 
     return {
       props: {
+        // PERBAIKAN: Memastikan data yang dikirim adalah array yang benar
         banners: banners || [],
         featuredProducts: featuredProducts.data || [],
         featuredWisata: featuredWisata.data || [],
@@ -40,36 +41,11 @@ export async function getServerSideProps() {
 
 export default function HomePage({ banners, featuredProducts, featuredWisata, desa, kategori }) {
   const router = useRouter();
-  // const [searchTerm, setSearchTerm] = useState(''); // Dihapus
-
-  // const handleSearchSubmit = (e) => { // Dihapus
-  //   e.preventDefault();
-  //   if (searchTerm.trim()) {
-  //     router.push(`/jelajah?q=${searchTerm.trim()}`);
-  //   }
-  // };
 
   return (
     <Layout>
       {/* Bagian Banner/Hero - Ganti dengan Carousel */}
       <BannerCarousel banners={banners} />
-
-      {/* Search Bar (DIHAPUS) */}
-      {/* <form onSubmit={handleSearchSubmit} className="mb-8">
-        <div className="relative">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Cari produk, wisata, atau desa..."
-            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-4 text-base shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary">
-            <IconSearch className="h-6 w-6" />
-          </button>
-        </div>
-      </form>
-      */}
 
       {/* Kategori (BARU) */}
       <KategoriGrid kategori={kategori} />
@@ -83,11 +59,13 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          {/* FOKUS: Memastikan data muncul di sini */}
           {featuredWisata.length > 0 ? (
             featuredWisata.map(wisata => (
               <WisataCard key={wisata.id} wisata={wisata} />
             ))
           ) : (
+            // PERBAIKAN: Tampilkan pesan jika data kosong
             <p className="col-span-full text-gray-500">Belum ada wisata unggulan.</p>
           )}
         </div>
@@ -102,11 +80,13 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          {/* FOKUS: Memastikan data muncul di sini */}
           {featuredProducts.length > 0 ? (
             featuredProducts.map(product => (
               <ProductCard key={product.id} product={product} />
             ))
           ) : (
+            // PERBAIKAN: Tampilkan pesan jika data kosong
             <p className="col-span-full text-gray-500">Belum ada produk unggulan.</p>
           )}
         </div>

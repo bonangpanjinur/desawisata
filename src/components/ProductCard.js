@@ -1,5 +1,6 @@
 // src/components/ProductCard.js
 // UI/UX: Perbaikan kecil pada tampilan
+// PERBAIKAN: Menambahkan `unoptimized` pada Image untuk mengatasi error 400
 import Link from 'next/link';
 import Image from 'next/image';
 import { IconMapPin, IconStore } from './icons';
@@ -9,8 +10,9 @@ const placeholderImg = "https://placehold.co/400x300/f4f4f5/a1a1aa?text=Sadesa";
 export default function ProductCard({ product }) {
   if (!product) return null;
 
+  // Menggunakan ukuran medium dari API, fallback ke placeholder jika null
   const imageUrl = product.gambar_unggulan?.medium || placeholderImg;
-  const linkUrl = `/produk/${product.slug}`; // Perbaikan: Ganti /product/ menjadi /produk/
+  const linkUrl = `/produk/${product.slug}`; 
   
   let displayPrice = product.harga_dasar;
   if (product.variasi && product.variasi.length > 0) {
@@ -26,6 +28,7 @@ export default function ProductCard({ product }) {
           alt={product.nama_produk || 'Gambar Produk'}
           layout="fill"
           objectFit="cover"
+          unoptimized={true} // **PENTING: Menambahkan unoptimized untuk menghindari error 400 Next/Image**
           className="transition-transform duration-300 group-hover:scale-105"
           onError={(e) => (e.target.src = placeholderImg)}
         />
