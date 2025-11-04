@@ -1,11 +1,12 @@
 // File: src/pages/akun.js
 // PERBAIKAN: Implementasi penuh form Login dan Register dengan state dan handler
+// PERBAIKAN 2: Mengganti nama import IconLogout -> IconLogOut
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/store/authStore';
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { IconUser, IconLogout, IconShoppingBag, IconChevronRight, IconEye, IconEyeOff } from '@/components/icons';
+import { IconUser, IconLogOut, IconShoppingBag, IconChevronRight, IconEye, IconEyeOff } from '@/components/icons'; // PERBAIKAN DI SINI
 import Link from 'next/link';
 
 export default function AkunPage() {
@@ -114,7 +115,7 @@ export default function AkunPage() {
           }}
           className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-red-500 py-3 px-4 font-semibold text-white shadow transition-colors hover:bg-red-600"
         >
-          <IconLogout className="h-5 w-5" />
+          <IconLogOut className="h-5 w-5" />
           <span>Keluar</span>
         </button>
       </Layout>
@@ -270,4 +271,3 @@ export default function AkunPage() {
     </Layout>
   );
 }
-

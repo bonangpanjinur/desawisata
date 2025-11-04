@@ -1,5 +1,5 @@
 // File: src/components/icons.js
-// Menambahkan ikon baru untuk filter dan checkout
+// PERBAIKAN: Menambahkan ikon yang hilang (Eye, EyeOff, Wallet, Clock, FileUp)
 import {
   Home,
   Search,
@@ -22,10 +22,15 @@ import {
   Download,
   Info,
   Map,
-  ChevronDown, // Tambahan
-  Filter,      // Tambahan
-  Truck,       // Tambahan
-  ShoppingBag, // Tambahan
+  ChevronDown,
+  Filter,
+  Truck,
+  ShoppingBag,
+  Eye, // BARU
+  EyeOff, // BARU
+  Wallet, // BARU
+  Clock, // BARU
+  FileUp, // BARU
 } from 'lucide-react';
 
 // Ekspor semua ikon yang kita butuhkan
@@ -50,8 +55,12 @@ export const IconArrowUpRight = ArrowUpRight;
 export const IconDownload = Download;
 export const IconInfo = Info;
 export const IconMap = Map;
-export const IconChevronDown = ChevronDown; // Tambahan
-export const IconFilter = Filter;          // Tambahan
-export const IconTruck = Truck;            // Tambahan
-export const IconShoppingBag = ShoppingBag; // Tambahan
-
+export const IconChevronDown = ChevronDown;
+export const IconFilter = Filter;
+export const IconTruck = Truck;
+export const IconShoppingBag = ShoppingBag;
+export const IconEye = Eye; // BARU
+export const IconEyeOff = EyeOff; // BARU
+export const IconWallet = Wallet; // BARU
+export const IconClock = Clock; // BARU
+export const IconFileUpload = FileUp; // BARU
