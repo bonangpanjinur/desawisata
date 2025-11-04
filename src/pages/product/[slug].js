@@ -4,7 +4,7 @@ import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { apiFetch } from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
-import { IconMapPin, IconStore, IconPlus, IconMinus } from '@/components/icons';
+import { IconMapPin, IconStore, IconPlus, IconMinus, IconCart } from '@/components/icons'; // Impor IconCart
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -59,7 +59,7 @@ export default function ProductDetailPage({ product, reviews }) {
             alt={product.nama_produk}
             layout="fill"
             objectFit="cover"
-            onError={(e) => e.target.src = placeholderImg}
+            onError={(e) => (e.target.src = placeholderImg)}
           />
         </div>
 
@@ -176,4 +176,3 @@ export default function ProductDetailPage({ product, reviews }) {
     </Layout>
   );
 }
-

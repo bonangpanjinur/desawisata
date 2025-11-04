@@ -1,5 +1,5 @@
-// src/components/icons.js
-// Menggunakan lucide-react untuk ikon
+// File: src/components/icons.js
+// Menambahkan ikon baru untuk filter dan checkout
 import {
   Home,
   Search,
@@ -21,6 +21,11 @@ import {
   ArrowUpRight,
   Download,
   Info,
+  Map,
+  ChevronDown, // Tambahan
+  Filter,      // Tambahan
+  Truck,       // Tambahan
+  ShoppingBag, // Tambahan
 } from 'lucide-react';
 
 // Ekspor semua ikon yang kita butuhkan
@@ -44,4 +49,9 @@ export const IconPackage = Package;
 export const IconArrowUpRight = ArrowUpRight;
 export const IconDownload = Download;
 export const IconInfo = Info;
+export const IconMap = Map;
+export const IconChevronDown = ChevronDown; // Tambahan
+export const IconFilter = Filter;          // Tambahan
+export const IconTruck = Truck;            // Tambahan
+export const IconShoppingBag = ShoppingBag; // Tambahan
 

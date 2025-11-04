@@ -1,4 +1,5 @@
-// src/pages/checkout.js
+// File: src/pages/checkout.js
+// Menambahkan ikon untuk "Ambil di Tempat"
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -6,7 +7,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { apiFetch } from '@/lib/api';
-import { IconCheckCircle } from '@/components/icons';
+import { IconCheckCircle, IconTruck, IconShoppingBag } from '@/components/icons'; // Tambahkan ikon
 
 // Komponen Alamat (Form + Tampilan)
 function AlamatForm({ alamat, setAlamat }) {
@@ -59,29 +60,39 @@ function ShippingOptions({ tokoId, namaToko, options, selected, onSelect }) {
     <div className="rounded-lg border bg-white shadow-sm mb-4">
       <h3 className="p-4 font-semibold border-b">{namaToko}</h3>
       <div className="p-4 space-y-3">
-        {options.map(opt => (
-          <label
-            key={opt.metode}
-            className={`flex justify-between items-center rounded-lg border p-3 cursor-pointer ${
-              selected === opt.metode ? 'border-primary ring-2 ring-primary' : 'border-gray-300'
-            }`}
-          >
-            <div>
-              <p className="font-semibold">{opt.nama}</p>
-              <p className="text-sm text-gray-500">
+        {options.map(opt => {
+          const isPickup = opt.metode.startsWith('local_pickup');
+          
+          return (
+            <label
+              key={opt.metode}
+              className={`flex items-center gap-4 rounded-lg border p-3 cursor-pointer ${
+                selected === opt.metode ? 'border-primary ring-2 ring-primary' : 'border-gray-300'
+              }`}
+            >
+              <div className="text-primary">
+                {isPickup ? <IconShoppingBag className="h-6 w-6" /> : <IconTruck className="h-6 w-6" />}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">{opt.nama}</p>
+                <p className="text-sm text-gray-500">
+                  {isPickup ? 'Ambil sendiri di lokasi penjual' : `Estimasi pengiriman`}
+                </p>
+              </div>
+              <p className="font-semibold">
                 {opt.harga === 0 ? 'Gratis' : `Rp ${opt.harga.toLocaleString('id-ID')}`}
               </p>
-            </div>
-            <input
-              type="radio"
-              name={`shipping-${tokoId}`}
-              value={opt.metode}
-              checked={selected === opt.metode}
-              onChange={() => onSelect(tokoId, opt.metode)}
-              className="form-radio h-5 w-5 text-primary"
-            />
-          </label>
-        ))}
+              <input
+                type="radio"
+                name={`shipping-${tokoId}`}
+                value={opt.metode}
+                checked={selected === opt.metode}
+                onChange={() => onSelect(tokoId, opt.metode)}
+                className="form-radio h-5 w-5 text-primary"
+              />
+            </label>
+          );
+        })}
       </div>
     </div>
   );
