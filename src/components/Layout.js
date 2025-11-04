@@ -10,6 +10,10 @@ export default function Layout({ children }) {
   const [websiteTitle, setWebsiteTitle] = useState('Sadesa.site'); // Default title
 
   useEffect(() => {
+    // FUNGSI INI MENYEBABKAN ERROR 404 DI KONSOL ANDA
+    // Endpoint '/settings' tidak ditemukan di API WordPress Anda.
+    // Ini harus diperbaiki di sisi backend (PHP/WordPress)
+    // dengan menambahkan route: register_rest_route('desawisata/v1', '/settings', ...);
     const fetchSettings = async () => {
       try {
         const settings = await apiFetch('/settings');
@@ -23,6 +27,7 @@ export default function Layout({ children }) {
           setWebsiteTitle(settings.nama_website);
         }
       } catch (error) {
+        // Ini akan muncul di konsol sebagai "Gagal mengambil public settings"
         console.error("Gagal mengambil public settings:", error);
       }
     };

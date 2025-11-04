@@ -8,10 +8,10 @@ const urlsToCache = [
   '/jelajah',
   '/keranjang',
   '/akun',
-  '/src/styles/globals.css',
-  // Anda perlu menambahkan ikon-ikon di folder public
-  '/icon-192x192.png',
-  '/icon-512x512.png',
+  '/src/styles/globals.css'
+  // PERBAIKAN: Menghapus ikon lokal yang tidak ada dari cache
+  // '/icon-192x192.png',
+  // '/icon-512x512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -75,4 +75,3 @@ self.addEventListener('activate', (event) => {
   );
   self.clients.claim();
 });
-
