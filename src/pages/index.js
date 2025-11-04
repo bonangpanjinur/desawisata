@@ -1,5 +1,5 @@
 // File: src/pages/index.js
-// PERBAIKAN: Menghapus search bar dari halaman utama
+// PERBAIKAN: Mengganti filter "unggulan=true" menjadi mengambil data terbaru.
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -15,20 +15,22 @@ import { IconArrowUpRight, IconMapPin, IconStore, IconSearch } from '@/component
 export async function getServerSideProps() {
   try {
     // Ambil data secara paralel
-    const [banners, featuredProducts, featuredWisata, desa, kategori] = await Promise.all([
+    // --- PERBAIKAN: Hapus ?unggulan=true untuk mengambil data terbaru ---
+    const [banners, products, wisata, desa, kategori] = await Promise.all([
       apiFetch('/banner'),
-      apiFetch('/produk?unggulan=true&per_page=6'),
-      apiFetch('/wisata?unggulan=true&per_page=6'),
+      apiFetch('/produk?per_page=6'), // Mengambil 6 produk terbaru
+      apiFetch('/wisata?per_page=6'), // Mengambil 6 wisata terbaru
       apiFetch('/desa?per_page=6'),
       apiFetch('/kategori/produk?per_page=8'), // Ambil 8 kategori populer
     ]);
+    // --- AKHIR PERBAIKAN ---
 
     return {
       props: {
         // PERBAIKAN: Memastikan data yang dikirim adalah array yang benar
         banners: banners || [],
-        featuredProducts: featuredProducts.data || [],
-        featuredWisata: featuredWisata.data || [],
+        featuredProducts: products.data || [], // Tetap gunakan nama prop `featuredProducts`
+        featuredWisata: wisata.data || [], // Tetap gunakan nama prop `featuredWisata`
         desa: desa.data || [],
         kategori: kategori || [],
       },
@@ -53,7 +55,8 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
       {/* Bagian Wisata Unggulan */}
       <section className="mb-10">
         <div className="mb-4 flex items-center justify-between border-b pb-2">
-          <h2 className="text-2xl font-bold">Wisata Unggulan</h2>
+          {/* Judul diubah dari "Unggulan" menjadi "Terbaru" */}
+          <h2 className="text-2xl font-bold">Wisata Terbaru</h2>
           <Link href="/jelajah?tipe=wisata" className="flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark">
             Lihat Semua <IconArrowUpRight className="h-4 w-4" />
           </Link>
@@ -66,7 +69,7 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
             ))
           ) : (
             // PERBAIKAN: Tampilkan pesan jika data kosong
-            <p className="col-span-full text-gray-500">Belum ada wisata unggulan.</p>
+            <p className="col-span-full text-gray-500">Belum ada wisata terbaru.</p>
           )}
         </div>
       </section>
@@ -74,7 +77,8 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
       {/* Bagian Produk Unggulan */}
       <section className="mb-10">
         <div className="mb-4 flex items-center justify-between border-b pb-2">
-          <h2 className="text-2xl font-bold">Produk Unggulan</h2>
+          {/* Judul diubah dari "Unggulan" menjadi "Terbaru" */}
+          <h2 className="text-2xl font-bold">Produk Terbaru</h2>
           <Link href="/jelajah?tipe=produk" className="flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark">
             Lihat Semua <IconArrowUpRight className="h-4 w-4" />
           </Link>
@@ -87,7 +91,7 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
             ))
           ) : (
             // PERBAIKAN: Tampilkan pesan jika data kosong
-            <p className="col-span-full text-gray-500">Belum ada produk unggulan.</p>
+            <p className="col-span-full text-gray-500">Belum ada produk terbaru.</p>
           )}
         </div>
       </section>
