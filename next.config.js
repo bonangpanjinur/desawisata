@@ -1,8 +1,7 @@
 // File: next.config.js
 // LOKASI: Folder utama (root)
 //
-// Menggunakan format 'remotePatterns' yang lebih modern
-// Ini menggantikan format 'domains' yang lama
+// PERBAIKAN: Mengganti admin.sadesa.site dengan admin.bonang.my.id
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -10,7 +9,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'admin.sadesa.site',
+        hostname: 'admin.bonang.my.id', // PERBAIKAN DI SINI
         port: '',
         pathname: '/**', // Izinkan semua path di domain ini
       },
@@ -25,4 +24,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-

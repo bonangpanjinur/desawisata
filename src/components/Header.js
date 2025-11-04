@@ -1,5 +1,6 @@
 // src/components/Header.js
 // UI/UX: Menerima props 'title'
+// PERBAIKAN: Menyembunyikan ikon keranjang dan akun di tampilan mobile (md:hidden)
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -23,7 +24,8 @@ export default function Header({ title }) {
           <Link href="/jelajah" className="relative hidden md:block" aria-label="Jelajah">
             <IconSearch className="h-6 w-6 text-gray-600 hover:text-primary" />
           </Link>
-          <Link href="/keranjang" className="relative" aria-label="Keranjang">
+          {/* PERBAIKAN: Tambahkan md:block untuk menyembunyikan di mobile */}
+          <Link href="/keranjang" className="relative hidden md:block" aria-label="Keranjang">
             <IconCart className="h-6 w-6 text-gray-600 hover:text-primary" />
             {cartItemCount > 0 && (
               <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
@@ -31,7 +33,8 @@ export default function Header({ title }) {
               </span>
             )}
           </Link>
-          <Link href="/akun" className="relative" aria-label="Akun">
+          {/* PERBAIKAN: Tambahkan md:block untuk menyembunyikan di mobile */}
+          <Link href="/akun" className="relative hidden md:block" aria-label="Akun">
             <IconUser className={`h-6 w-6 ${user ? 'text-primary' : 'text-gray-600 hover:text-primary'}`} />
           </Link>
         </nav>

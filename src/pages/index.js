@@ -1,5 +1,5 @@
 // File: src/pages/index.js
-// PERBAIKAN: Memperbaiki pengambilan data `kategori` di getServerSideProps
+// PERBAIKAN: Menghapus search bar dari halaman utama
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -29,7 +29,6 @@ export async function getServerSideProps() {
         featuredProducts: featuredProducts.data || [],
         featuredWisata: featuredWisata.data || [],
         desa: desa.data || [],
-        // PERBAIKAN: Endpoint kategori mengembalikan array langsung, bukan objek { data: [...] }
         kategori: kategori || [],
       },
     };
@@ -41,22 +40,22 @@ export async function getServerSideProps() {
 
 export default function HomePage({ banners, featuredProducts, featuredWisata, desa, kategori }) {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
+  // const [searchTerm, setSearchTerm] = useState(''); // Dihapus
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      router.push(`/jelajah?q=${searchTerm.trim()}`);
-    }
-  };
+  // const handleSearchSubmit = (e) => { // Dihapus
+  //   e.preventDefault();
+  //   if (searchTerm.trim()) {
+  //     router.push(`/jelajah?q=${searchTerm.trim()}`);
+  //   }
+  // };
 
   return (
     <Layout>
       {/* Bagian Banner/Hero - Ganti dengan Carousel */}
       <BannerCarousel banners={banners} />
 
-      {/* Search Bar (BARU) */}
-      <form onSubmit={handleSearchSubmit} className="mb-8">
+      {/* Search Bar (DIHAPUS) */}
+      {/* <form onSubmit={handleSearchSubmit} className="mb-8">
         <div className="relative">
           <input
             type="text"
@@ -70,6 +69,7 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
           </button>
         </div>
       </form>
+      */}
 
       {/* Kategori (BARU) */}
       <KategoriGrid kategori={kategori} />
