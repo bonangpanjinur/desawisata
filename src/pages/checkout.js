@@ -1,287 +1,297 @@
-// src/pages/checkout.js
-// PERBAIKAN: Menambahkan state 'loadingOrder' dan feedback toast
-// untuk tombol "Buat Pesanan".
-
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import useAuthStore from '@/store/authStore';
 import useCartStore from '@/store/cartStore';
+import useAuthStore from '@/store/authStore';
 import Layout from '@/components/Layout';
-import { apiGetShippingOptions, apiCreateOrder, apiGetAlamat } from '@/lib/api';
-import { toast } from 'react-hot-toast'; // Sudah diimpor
+import { apiGetAlamat, apiGetShippingOptions, apiCreateOrder } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import toast from 'react-hot-toast'; // Import toast
+import LoadingSpinner from '@/components/LoadingSpinner'; // Import loading spinner
 
-export default function Checkout() {
+export default function CheckoutPage() {
   const router = useRouter();
-  const { user, token } = useAuthStore();
   const { cart, getTotalPrice, clearCart, getCartGroupedBySeller } = useCartStore();
-
+  const { user, token } = useAuthStore();
+  
   const [alamatList, setAlamatList] = useState([]);
   const [selectedAlamat, setSelectedAlamat] = useState(null);
-  const [shippingOptions, setShippingOptions] = useState(null); // { sellerId: { nama_toko: '...', options: [...] } }
-  const [selectedShipping, setSelectedShipping] = useState({}); // { sellerId: { metode: '...', harga: ... } }
-  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
+  const [shippingOptions, setShippingOptions] = useState({});
+  const [paymentMethod, setPaymentMethod] = useState('transfer_bank');
   
-  const [loadingAlamat, setLoadingAlamat] = useState(true);
+  // State baru untuk loading dan error
+  const [loadingAddress, setLoadingAddress] = useState(true);
   const [loadingShipping, setLoadingShipping] = useState(false);
-  // 1. Tambahkan state loading untuk proses order
-  const [loadingOrder, setLoadingOrder] = useState(false); 
+  const [loadingOrder, setLoadingOrder] = useState(false);
 
+  // Memoize data keranjang yang dikelompokkan
   const groupedCart = useMemo(() => getCartGroupedBySeller(), [cart]);
-  const totalPrice = getTotalPrice();
-  
-  // Hitung total ongkir
-  const totalShipping = useMemo(() => {
-    return Object.values(selectedShipping).reduce((total, option) => total + (option.harga || 0), 0);
-  }, [selectedShipping]);
 
-  // Cek apakah semua pengiriman sudah dipilih
-  const isOrderReady = useMemo(() => {
-    const sellerIdsInCart = Object.keys(groupedCart);
-    const selectedSellerIds = Object.keys(selectedShipping);
-    return sellerIdsInCart.length > 0 && selectedSellerIds.length === sellerIdsInCart.length;
-  }, [groupedCart, selectedShipping]);
-
-
-  // Efek untuk mengambil alamat pengguna
+  // 1. Redirect jika belum login atau keranjang kosong
   useEffect(() => {
-    if (!user) {
-      toast.error('Anda harus login untuk checkout.');
-      router.push('/akun');
-      return;
+    if (!token) {
+      toast.error("Anda harus login untuk checkout.");
+      router.push('/akun?redirect=/checkout');
     }
+    if (cart.length === 0 && !loadingOrder) { // Jangan redirect jika sedang proses order
+      toast.error("Keranjang Anda kosong.");
+      router.push('/keranjang');
+    }
+  }, [token, cart, loadingOrder, router]);
 
-    const fetchAlamat = async () => {
-      setLoadingAlamat(true);
-      try {
-        const data = await apiGetAlamat(); // Asumsi apiGetAlamat ada di api.js
-        setAlamatList(data.addresses || []);
-        // Set alamat default jika ada
-        const defaultAlamat = data.addresses.find(a => a.id === data.default_address_id);
-        if (defaultAlamat) {
-          setSelectedAlamat(defaultAlamat);
-        } else if (data.addresses.length > 0) {
-          setSelectedAlamat(data.addresses[0]); // Fallback ke alamat pertama
+  // 2. Ambil alamat pengguna
+  useEffect(() => {
+    if (token) {
+      const fetchAlamat = async () => {
+        setLoadingAddress(true);
+        try {
+          const data = await apiGetAlamat();
+          setAlamatList(data.addresses || []);
+          if (data.default_address_id) {
+            const defaultAlamat = data.addresses.find(a => a.id === data.default_address_id);
+            setSelectedAlamat(defaultAlamat || data.addresses[0] || null);
+          } else {
+            setSelectedAlamat(data.addresses[0] || null);
+          }
+        } catch (err) {
+          console.error("Gagal memuat alamat:", err);
+          toast.error(`Gagal memuat alamat: ${err.message}`);
+        } finally {
+          setLoadingAddress(false);
         }
-      } catch (error) {
-        console.error('Gagal memuat alamat:', error);
-        toast.error('Gagal memuat alamat. Harap refresh halaman.');
-      } finally {
-        setLoadingAlamat(false);
-      }
-    };
-    fetchAlamat();
-  }, [user, router]);
+      };
+      fetchAlamat();
+    }
+  }, [token]);
 
-  // Efek untuk mengambil opsi pengiriman ketika alamat atau keranjang berubah
+  // 3. Hitung ongkir setiap kali alamat atau keranjang berubah
   useEffect(() => {
     if (!selectedAlamat || cart.length === 0) {
-      setShippingOptions(null); // Kosongkan opsi jika tidak ada alamat/item
+      setShippingOptions({});
       return;
     }
 
     const fetchShippingOptions = async () => {
       setLoadingShipping(true);
-      setShippingOptions(null); // Reset
-      setSelectedShipping({}); // Reset pilihan
-      
-      const cartItemsForApi = cart.map(item => ({
-        product_id: item.productId,
-        // ... (data lain mungkin diperlukan oleh API Anda)
-      }));
-
       try {
+        const cartItemsForApi = cart.map(item => ({
+          product_id: item.productId,
+          seller_id: item.sellerId,
+        }));
+        
+        const addressApiData = {
+          provinsi_id: selectedAlamat.api_provinsi_id,
+          kabupaten_id: selectedAlamat.api_kabupaten_id,
+          kecamatan_id: selectedAlamat.api_kecamatan_id,
+          kelurahan_id: selectedAlamat.api_kelurahan_id,
+        };
+
         const data = await apiGetShippingOptions({
           cart_items: cartItemsForApi,
-          address_api: {
-            // Pastikan backend Anda menerima ID ini
-            kecamatan_id: selectedAlamat.api_kecamatan_id,
-            kelurahan_id: selectedAlamat.api_kelurahan_id,
-          }
+          address_api: addressApiData,
         });
-        setShippingOptions(data.seller_options);
-      } catch (error) {
-        console.error('Gagal memuat opsi pengiriman:', error);
-        toast.error('Gagal memuat opsi pengiriman.');
+        
+        setShippingOptions(data.seller_options || {});
+
+      } catch (err) {
+        console.error("Gagal hitung ongkir:", err);
+        toast.error(`Gagal menghitung ongkir: ${err.message}`);
+        setShippingOptions({}); // Reset jika gagal
       } finally {
         setLoadingShipping(false);
       }
     };
 
-    const debounceTimer = setTimeout(fetchShippingOptions, 300); // Debounce
-    return () => clearTimeout(debounceTimer);
+    fetchShippingOptions();
+  }, [cart, selectedAlamat]);
 
-  }, [selectedAlamat, cart]);
+  // 4. Hitung total (termasuk ongkir)
+  const { totalShipping, totalGrand, sellerShippingChoices } = useMemo(() => {
+    let totalShipping = 0;
+    const choices = {};
+    const sellerIds = Object.keys(groupedCart);
 
-  // Handler saat memilih alamat
-  const handleAlamatChange = (e) => {
-    const alamatId = parseInt(e.target.value, 10);
-    const alamat = alamatList.find(a => a.id === alamatId);
-    setSelectedAlamat(alamat);
-  };
-
-  // Handler saat memilih opsi pengiriman
-  const handleShippingChange = (sellerId, option) => {
-    setSelectedShipping(prev => ({
-      ...prev,
-      [sellerId]: option
-    }));
-  };
-
-  // 2. Modifikasi fungsi handlePlaceOrder
-  const handlePlaceOrder = async () => {
-    // Validasi
-    if (!selectedAlamat) {
-      toast.error('Silakan pilih alamat pengiriman.');
-      return;
+    if (sellerIds.length === 0 || Object.keys(shippingOptions).length === 0) {
+      return { totalShipping: 0, totalGrand: getTotalPrice(), choices: {} };
     }
-    if (!isOrderReady) {
-      toast.error('Silakan pilih metode pengiriman untuk semua toko.');
-      return;
-    }
-    // Cegah klik ganda
-    if (loadingOrder) return;
 
-    setLoadingOrder(true); // Set loading true
+    // Default ke opsi pengiriman termurah untuk setiap penjual
+    for (const sellerId of sellerIds) {
+      const optionsForSeller = shippingOptions[sellerId]?.options;
+      if (optionsForSeller && optionsForSeller.length > 0) {
+        // Urutkan berdasarkan harga termurah, prioritaskan selain 'tidak_tersedia'
+        const sortedOptions = [...optionsForSeller].sort((a, b) => {
+          if (a.metode === 'tidak_tersedia') return 1;
+          if (b.metode === 'tidak_tersedia') return -1;
+          return (a.harga || 0) - (b.harga || 0);
+        });
+        
+        const cheapestOption = sortedOptions[0];
+        
+        if (cheapestOption.metode !== 'tidak_tersedia' && cheapestOption.harga !== null) {
+          totalShipping += cheapestOption.harga;
+          choices[sellerId] = {
+            metode: cheapestOption.metode,
+            harga: cheapestOption.harga,
+          };
+        } else {
+          // Jika satu saja tidak tersedia, set pilihan ke 'tidak_tersedia'
+          choices[sellerId] = { metode: 'tidak_tersedia', harga: null };
+        }
+      }
+    }
     
-    try {
-      // Siapkan data untuk API
-      const sellerShippingChoices = {};
-      Object.keys(selectedShipping).forEach(sellerId => {
-        const option = selectedShipping[sellerId];
-        sellerShippingChoices[sellerId] = {
-          metode: option.metode,
-          harga: option.harga,
-        };
-      });
+    const totalProduk = getTotalPrice();
+    return { 
+      totalShipping, 
+      totalGrand: totalProduk + totalShipping, 
+      sellerShippingChoices: choices 
+    };
+  }, [groupedCart, shippingOptions, getTotalPrice]);
 
-      const cartItemsForApi = cart.map(item => ({
-        product_id: item.productId,
-        variation_id: item.variation?.id || 0,
-        quantity: item.quantity,
-        price: item.price,
-        seller_id: item.sellerId, // Pastikan sellerId ada di cartStore
-      }));
-
-      const orderData = {
-        cart_items: cartItemsForApi,
-        shipping_address_id: selectedAlamat.id,
-        seller_shipping_choices: sellerShippingChoices,
-        payment_method: paymentMethod,
-      };
-
-      // Panggil API
-      const order = await apiCreateOrder(orderData); // Memanggil api.js
-
-      // Sukses
-      toast.success('Pesanan berhasil dibuat!');
-      clearCart();
-      // Arahkan ke halaman detail pesanan
-      router.push(`/pesanan/${order.order_id}`); // Sesuaikan dengan respons API Anda
-
-    } catch (error) {
-      console.error('Gagal membuat pesanan:', error);
-      // Tampilkan error ke pengguna
-      toast.error(error.message || 'Gagal membuat pesanan. Silakan coba lagi.');
-    } finally {
-      setLoadingOrder(false); // Set loading false
-    }
+  // 5. Cek kesiapan order
+  const isOrderReady = () => {
+    if (!selectedAlamat || loadingAddress || loadingShipping || loadingOrder) return false;
+    if (Object.keys(sellerShippingChoices).length === 0 && cart.length > 0) return false;
+    // Cek jika ada seller yang tidak punya opsi pengiriman
+    return Object.values(sellerShippingChoices).every(choice => choice.metode !== 'tidak_tersedia');
   };
 
+  // 6. Fungsi Buat Pesanan
+  const handlePlaceOrder = async () => {
+    if (!isOrderReady()) {
+      toast.error("Pastikan alamat dan opsi pengiriman sudah lengkap.");
+      return;
+    }
 
-  if (loadingAlamat) {
-    return (
-      <Layout>
-        <div className="flex justify-center items-center h-screen">
-          <LoadingSpinner />
-        </div>
-      </Layout>
-    );
-  }
+    setLoadingOrder(true);
+    
+    // Siapkan data item keranjang untuk API
+    const cartItemsForApi = cart.map(item => ({
+      product_id: item.productId,
+      variation_id: item.variation?.id || 0,
+      quantity: item.quantity,
+      price: item.price,
+      seller_id: item.sellerId,
+    }));
+
+    const orderData = {
+      cart_items: cartItemsForApi,
+      shipping_address_id: selectedAlamat.id,
+      seller_shipping_choices: sellerShippingChoices,
+      payment_method: paymentMethod,
+    };
+
+    try {
+      const data = await apiCreateOrder(orderData);
+      
+      toast.success('Pesanan berhasil dibuat! Mengalihkan ke halaman pembayaran...');
+      
+      // Kosongkan keranjang
+      clearCart();
+      
+      // Redirect ke halaman detail pesanan/pembayaran
+      router.push(`/pesanan/${data.order_id}`);
+
+    } catch (err) {
+      console.error("Gagal membuat pesanan:", err);
+      toast.error(`Gagal membuat pesanan: ${err.message}`);
+      setLoadingOrder(false); // Berhenti loading jika gagal
+    } 
+    // finally {
+    //   // Jangan set loading false di sini, biarkan halaman me-redirect
+    // }
+  };
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 max-w-4xl">
+      <div className="container mx-auto max-w-4xl p-4 min-h-screen">
         <h1 className="text-3xl font-bold mb-6">Checkout</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
           {/* Kolom Kiri: Alamat & Pengiriman */}
           <div>
-            {/* --- Pemilihan Alamat --- */}
+            {/* --- Bagian Alamat --- */}
             <div className="bg-white p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-xl font-semibold mb-4">Alamat Pengiriman</h2>
-              {alamatList.length > 0 ? (
+              {loadingAddress ? (
+                <LoadingSpinner />
+              ) : alamatList.length > 0 ? (
                 <select 
-                  className="w-full p-2 border rounded-lg"
                   value={selectedAlamat?.id || ''}
-                  onChange={handleAlamatChange}
+                  onChange={(e) => setSelectedAlamat(alamatList.find(a => a.id == e.target.value))}
+                  className="w-full p-2 border rounded-md"
                 >
-                  <option value="" disabled>Pilih Alamat</option>
                   {alamatList.map(alamat => (
                     <option key={alamat.id} value={alamat.id}>
-                      {alamat.nama_penerima} - {alamat.alamat_lengkap}, {alamat.kelurahan}, {alamat.kecamatan}
+                      {alamat.nama_penerima} - {alamat.alamat_lengkap}, {alamat.kelurahan}, {alamat.kecamatan}, {alamat.kabupaten}
                     </option>
                   ))}
                 </select>
               ) : (
-                <p>Anda belum memiliki alamat. Silakan tambahkan di halaman Akun.</p>
+                <p>Anda belum memiliki alamat. <button onClick={() => router.push('/akun?tab=alamat')} className="text-blue-600 hover:underline">Tambah Alamat</button></p>
               )}
             </div>
 
-            {/* --- Opsi Pengiriman per Toko --- */}
+            {/* --- Bagian Opsi Pengiriman --- */}
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">Opsi Pengiriman</h2>
-              {loadingShipping && <p>Menghitung opsi pengiriman...</p>}
-              
-              {!loadingShipping && !shippingOptions && selectedAlamat && (
-                <p className="text-gray-500">Opsi pengiriman akan muncul di sini.</p>
-              )}
+              {loadingShipping ? (
+                <LoadingSpinner />
+              ) : (
+                <div className="space-y-4">
+                  {Object.keys(groupedCart).map(sellerId => {
+                    const seller = groupedCart[sellerId];
+                    const options = shippingOptions[sellerId]?.options || [];
+                    const selectedChoice = sellerShippingChoices[sellerId];
 
-              {!loadingShipping && shippingOptions && Object.keys(shippingOptions).map(sellerId => {
-                const sellerData = shippingOptions[sellerId];
-                return (
-                  <div key={sellerId} className="mb-4 border-b pb-4">
-                    <h3 className="font-semibold text-gray-800">Pesanan dari: {sellerData.nama_toko}</h3>
-                    {sellerData.options.length > 0 ? (
-                      sellerData.options.map((option, index) => (
-                        <div key={index} className="flex items-center mt-2">
-                          <input 
-                            type="radio"
-                            name={`shipping_${sellerId}`}
-                            id={`shipping_${sellerId}_${index}`}
-                            value={option.metode}
-                            checked={selectedShipping[sellerId]?.metode === option.metode}
-                            onChange={() => handleShippingChange(sellerId, option)}
-                            className="mr-2"
-                          />
-                          <label htmlFor={`shipping_${sellerId}_${index}`} className="flex justify-between w-full">
-                            <span>{option.nama}</span>
-                            <span className="font-medium">{option.harga !== null ? `Rp ${formatCurrency(option.harga)}` : 'N/A'}</span>
-                          </label>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-red-500">Tidak ada opsi pengiriman ke alamat Anda.</p>
-                    )}
-                  </div>
-                );
-              })}
+                    return (
+                      <div key={sellerId}>
+                        <h3 className="font-semibold">{seller.nama_toko}</h3>
+                        {options.length > 0 ? (
+                          options.map(opt => (
+                            <div key={opt.metode} className="flex justify-between items-center text-sm ml-2">
+                              <span>
+                                <input 
+                                  type="radio" 
+                                  name={`shipping_${sellerId}`} 
+                                  value={opt.metode}
+                                  checked={selectedChoice?.metode === opt.metode}
+                                  onChange={() => {
+                                    // Logika untuk mengubah pilihan ongkir (jika diperlukan)
+                                    // Saat ini otomatis pilih yg termurah
+                                  }}
+                                  disabled // Nonaktifkan pilihan manual untuk saat ini
+                                  className="mr-2"
+                                />
+                                {opt.nama}
+                              </span>
+                              <span className={opt.harga === null ? 'text-red-600' : ''}>
+                                {opt.harga === null ? 'Tidak Tersedia' : `Rp ${formatCurrency(opt.harga)}`}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500 ml-2">Menghitung ongkir...</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Kolom Kanan: Ringkasan Pesanan */}
+          {/* Kolom Kanan: Ringkasan & Pembayaran */}
           <div>
             <div className="bg-white p-6 rounded-lg shadow-md sticky top-24">
               <h2 className="text-xl font-semibold mb-4">Ringkasan Pesanan</h2>
               
-              {/* Daftar Item (Ringkas) */}
-              <div className="max-h-60 overflow-y-auto mb-4 border-b pb-4">
+              <div className="mb-4 max-h-60 overflow-y-auto pr-2">
                 {cart.map(item => (
                   <div key={item.id} className="flex justify-between items-center mb-2">
                     <div>
-                      <p className="font-medium">{item.name} <span className="text-gray-600">x {item.quantity}</span></pre>
+                      {/* PERBAIKAN SYNTAX ERROR: </pre> menjadi </p> */}
+                      <p className="font-medium">{item.name} <span className="text-gray-600">x {item.quantity}</span></p>
                       <p className="text-sm text-gray-500">{item.toko?.nama_toko}</p>
                     </div>
                     <p className="text-gray-700">Rp {formatCurrency(item.price * item.quantity)}</p>
@@ -289,37 +299,45 @@ export default function Checkout() {
                 ))}
               </div>
 
-              {/* Total */}
-              <div className="space-y-2">
+              <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal Produk</span>
-                  <span className="font-medium">Rp {formatCurrency(totalPrice)}</span>
+                  <span>Subtotal Produk</span>
+                  <span>Rp {formatCurrency(getTotalPrice())}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Ongkir</span>
-                  <span className="font-medium">Rp {formatCurrency(totalShipping)}</span>
+                  <span>Total Ongkos Kirim</span>
+                  <span>{loadingShipping ? '...' : `Rp ${formatCurrency(totalShipping)}`}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                  <span>Total Bayar</span>
-                  <span>Rp {formatCurrency(totalPrice + totalShipping)}</span>
+                <div className="flex justify-between text-lg font-bold mt-2">
+                  <span>Total Pembayaran</span>
+                  <span>{loadingShipping ? '...' : `Rp ${formatCurrency(totalGrand)}`}</span>
                 </div>
-              </div>
-              
-              {/* Tombol Buat Pesanan */}
-              <div className="mt-6">
-                <button
-                  onClick={handlePlaceOrder}
-                  // 3. Update tombol disabled dan teks
-                  disabled={!isOrderReady || loadingAlamat || loadingShipping || loadingOrder}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
-                >
-                  {loadingAlamat ? 'Memuat Alamat...' : 
-                   loadingShipping ? 'Menghitung Ongkir...' :
-                   loadingOrder ? 'Memproses Pesanan...' : 
-                   `Buat Pesanan (Rp ${formatCurrency(totalPrice + totalShipping)})`}
-                </button>
               </div>
 
+              {/* --- Tombol Buat Pesanan --- */}
+              <button
+                onClick={handlePlaceOrder}
+                disabled={loadingAddress || loadingShipping || loadingOrder || !isOrderReady()}
+                className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg mt-6 hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loadingOrder ? (
+                  <span className="flex items-center justify-center">
+                    <LoadingSpinner /> Memproses Pesanan...
+                  </span>
+                ) : loadingShipping ? (
+                  'Menghitung Ongkir...'
+                ) : loadingAddress ? (
+                  'Memuat Alamat...'
+                ) : (
+                  'Buat Pesanan'
+                )}
+              </button>
+              
+              {!isOrderReady() && !loadingAddress && !loadingShipping && !loadingOrder && (
+                <p className="text-red-600 text-sm mt-2 text-center">
+                  Tidak dapat melanjutkan. Pastikan alamat dipilih dan pengiriman tersedia untuk semua toko.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -327,3 +345,4 @@ export default function Checkout() {
     </Layout>
   );
 }
+
