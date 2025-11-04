@@ -1,25 +1,26 @@
 /**
  * LOKASI FILE: src/pages/product/[slug].js
  * PERBAIKAN: 
- * 1. Mengganti 'apiGetProductBySlug' menjadi 'apiGetProdukDetail'.
- * 2. Mengganti 'apiGetReviews' (yang hilang) dengan impor yang benar.
+ * 1. Menambahkan 'apiGetProduk' ke dalam import dari '@/lib/api'
+ * untuk memperbaiki error 'apiGetProduk is not defined' di getStaticPaths.
  */
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { apiGetProdukDetail, apiGetReviews } from '@/lib/api'; // PERBAIKAN NAMA FUNGSI
+// PERBAIKAN: Tambahkan 'apiGetProduk'
+import { apiGetProdukDetail, apiGetReviews, apiGetProduk } from '@/lib/api'; 
 import Layout from '@/components/Layout';
 import { formatCurrency } from '@/lib/utils';
-import { useCartStore } from '@/store/cartStore'; // Impor bernama
+import { useCartStore } from '@/store/cartStore'; 
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Star } from 'lucide-react';
 
 export default function ProductDetail({ product, reviews }) {
   const router = useRouter();
-  const { addItem } = useCartStore(); // Impor bernama
+  const { addItem } = useCartStore(); 
   const [selectedVariation, setSelectedVariation] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false); // State loading untuk tombol
+  const [loading, setLoading] = useState(false); 
 
   if (router.isFallback) {
     return (
@@ -36,12 +37,11 @@ export default function ProductDetail({ product, reviews }) {
   }
 
   const hasVariations = product.variasi && product.variasi.length > 0;
-  const mainImage = product.gambar_unggulan?.large || product.galeri_foto?.[0]?.large || '/placeholder-large.png';
+  const mainImage = product.gambar_unggulan?.large || product.galeri_foto?.[0]?.large || 'https://placehold.co/600x600/f4f4f5/a1a1aa?text=Produk';
 
   const handleAddToCart = () => {
-    if (loading) return; // Cegah klik ganda
+    if (loading) return; 
 
-    // Validasi: Wajib pilih variasi jika ada
     if (hasVariations && !selectedVariation) {
       toast.error('Silakan pilih variasi terlebih dahulu.');
       return;
@@ -50,17 +50,14 @@ export default function ProductDetail({ product, reviews }) {
     setLoading(true);
     toast.loading('Menambahkan ke keranjang...');
 
-    // Tentukan variasi yang akan dikirim ke store
     const variationToAdd = hasVariations ? selectedVariation : null;
 
-    // Logika penambahan item (dari store)
     addItem(product, variationToAdd, quantity);
 
     setLoading(false);
     toast.dismiss();
     toast.success(`${product.nama_produk} berhasil ditambahkan!`);
 
-    // Reset quantity
     setQuantity(1);
     setSelectedVariation(null);
   };
@@ -76,7 +73,9 @@ export default function ProductDetail({ product, reviews }) {
       return selectedVariation.harga_variasi;
     }
     if (hasVariations) {
-      return null; // Tampilkan rentang harga atau teks "Pilih variasi"
+      // Tampilkan harga minimum jika ada variasi tapi belum dipilih
+      const minPrice = Math.min(...product.variasi.map(v => v.harga_variasi));
+      return minPrice;
     }
     return product.harga_dasar;
   };
@@ -90,14 +89,14 @@ export default function ProductDetail({ product, reviews }) {
           <div className="md:flex">
             {/* Kolom Gambar */}
             <div className="md:w-1/2">
-              <img src={mainImage} alt={product.nama_produk} className="w-full h-64 md:h-full object-cover" />
+              <img src={mainImage} alt={product.nama_produk} className="w-full h-64 md:h-[450px] object-cover" onError={(e) => (e.target.src = 'https://placehold.co/600x600/f4f4f5/a1a1aa?text=Produk')}/>
               {/* TODO: Galeri foto thumbnail */}
             </div>
 
             {/* Kolom Info */}
             <div className="md:w-1/2 p-6 flex flex-col justify-between">
               <div>
-                <a onClick={() => router.push(`/toko/${product.toko.id_pedagang}`)} className="text-sm text-blue-600 hover:underline cursor-pointer">{product.toko.nama_toko}</a>
+                <a onClick={() => router.push(`/toko/${product.toko.id_pedagang}`)} className="text-sm text-primary hover:underline cursor-pointer">{product.toko.nama_toko}</a>
                 <h1 className="text-3xl font-bold mt-1 mb-2">{product.nama_produk}</h1>
                 
                 <div className="flex items-center mb-4">
@@ -107,9 +106,12 @@ export default function ProductDetail({ product, reviews }) {
                 </div>
                 
                 {/* Harga */}
-                <div className="text-3xl font-bold text-green-600 mb-4">
+                <div className="text-3xl font-bold text-primary mb-4">
                   {displayPrice !== null ? (
-                    `Rp ${formatCurrency(displayPrice)}`
+                    <>
+                      {hasVariations && !selectedVariation && <span className="text-lg text-gray-500 font-normal">Mulai </span>}
+                      {`Rp ${formatCurrency(displayPrice)}`}
+                    </>
                   ) : (
                     <span className="text-xl">Pilih variasi untuk harga</span>
                   )}
@@ -154,7 +156,7 @@ export default function ProductDetail({ product, reviews }) {
                 <button
                   onClick={handleAddToCart}
                   disabled={loading || (hasVariations && !selectedVariation)}
-                  className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center">
@@ -208,7 +210,8 @@ export default function ProductDetail({ product, reviews }) {
 export async function getStaticPaths() {
   let products = [];
   try {
-    const data = await apiGetProduk({ per_page: 20 }); // Ambil 20 produk terbaru untuk paths
+    // PERBAIKAN: apiGetProduk sekarang sudah diimpor
+    const data = await apiGetProduk({ per_page: 20 }); 
     products = data.data;
   } catch (error) {
     console.error("Gagal fetch paths produk:", error);
@@ -223,13 +226,12 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
   try {
-    const product = await apiGetProdukDetail(params.slug); // PERBAIKAN NAMA FUNGSI
+    const product = await apiGetProdukDetail(params.slug); 
     let reviews = null;
     try {
-      reviews = await apiGetReviews('produk', product.id, { per_page: 5 }); // Ambil 5 ulasan
+      reviews = await apiGetReviews('produk', product.id, { per_page: 5 }); 
     } catch (reviewError) {
       console.error("Gagal fetch review:", reviewError.message);
-      // Tetap lanjutkan meski review gagal
     }
 
     return {
@@ -237,7 +239,7 @@ export async function getStaticProps({ params }) {
         product: product || null,
         reviews: reviews || null,
       },
-      revalidate: 60, // Revalidasi setiap 60 detik
+      revalidate: 60, 
     };
   } catch (error) {
     console.error(`Gagal fetch data produk ${params.slug}:`, error.message);
@@ -247,4 +249,3 @@ export async function getStaticProps({ params }) {
     };
   }
 }
-

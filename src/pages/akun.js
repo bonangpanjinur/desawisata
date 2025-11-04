@@ -1,16 +1,18 @@
 // src/pages/akun.js
-// PERBAIKAN: Menambahkan state 'loading' dan feedback error 'toast'
-// untuk login, register, dan update.
+// PERBAIKAN: Mengubah impor default 'useAuthStore' menjadi impor bernama.
+// import useAuthStore from '@/store/authStore'; // <-- INI SALAH
+import { useAuthStore } from '@/store/authStore'; // <-- INI BENAR
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import useAuthStore from '@/store/authStore';
 import Layout from '@/components/Layout';
-import { apiFetch, apiUpdateProfile } from '@/lib/api'; // Asumsi apiUpdateProfile ada di api.js
-import { toast } from 'react-hot-toast'; // 1. Impor toast
+import { apiFetch, apiUpdateProfile } from '@/lib/api'; 
+import { toast } from 'react-hot-toast'; 
+import LoadingSpinner from '@/components/LoadingSpinner'; // Import LoadingSpinner
 
 export default function Akun() {
   const router = useRouter();
+  // Sekarang 'useAuthStore' adalah fungsi yang benar dari impor bernama
   const { user, login, logout } = useAuthStore();
 
   // State untuk form
@@ -20,7 +22,6 @@ export default function Akun() {
   const [email, setEmail] = useState('');
   const [namaLengkap, setNamaLengkap] = useState('');
 
-  // 2. Tambahkan state loading
   const [loading, setLoading] = useState(false);
 
   // State untuk edit profil (jika sudah login)
@@ -36,31 +37,30 @@ export default function Akun() {
         email: user.email || '',
       });
     } else {
-      // Jika user logout atau token tidak valid, paksa ke mode login
       setIsLogin(true);
     }
   }, [user]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (loading) return; // 3. Cegah klik ganda
+    if (loading) return; 
 
-    setLoading(true); // 4. Set loading true
+    setLoading(true); 
     try {
       const success = await login(username, password);
       if (success) {
         toast.success('Login berhasil!');
-        router.push('/');
+        // Cek jika ada redirect URL
+        const redirectPath = router.query.redirect || '/';
+        router.push(redirectPath);
       } else {
-        // 'login' store akan menangani set error, kita tampilkan di sini
         toast.error('Login gagal. Cek kembali username/password Anda.');
       }
     } catch (error) {
       console.error(error);
-      // 5. Tampilkan error ke pengguna
       toast.error(error.message || 'Terjadi kesalahan saat login.');
     } finally {
-      setLoading(false); // 6. Set loading false
+      setLoading(false); 
     }
   };
 
@@ -70,8 +70,6 @@ export default function Akun() {
 
     setLoading(true);
     try {
-      // Asumsi Anda punya apiRegister di api.js, jika tidak kita buatkan
-      // Untuk sekarang, kita tiru endpoint dari plugin:
       await apiFetch('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
@@ -83,8 +81,7 @@ export default function Akun() {
       });
       
       toast.success('Registrasi berhasil! Silakan login.');
-      setIsLogin(true); // Arahkan ke tab login
-      // Kosongkan form
+      setIsLogin(true); 
       setUsername('');
       setPassword('');
       setEmail('');
@@ -103,24 +100,23 @@ export default function Akun() {
     if (loading) return;
 
     setLoading(true);
-    toast.loading('Menyimpan profil...'); // Contoh toast loading
+    toast.loading('Menyimpan profil...'); 
 
     try {
-      // TODO: Anda perlu membuat fungsi `apiUpdateProfile` di api.js
-      // yang melakukan POST ke `/pembeli/profile/me`
+      // NOTE: Pastikan 'apiUpdateProfile' ada di 'src/lib/api.js'
+      // dan melakukan POST ke '/pembeli/profile/me'
       // const updatedUser = await apiUpdateProfile(editData);
       
       // Untuk sementara, kita simulasi
-      // await new Promise(res => setTimeout(res, 1000)); 
+      await new Promise(res => setTimeout(res, 1000)); 
       // const updatedUser = { ...user, ...editData };
 
-      // Hapus toast loading
       toast.dismiss();
-
-      // TODO: Update user di authStore
+      
+      // TODO: Update user di authStore jika API tidak mengembalikannya
       // useAuthStore.setState({ user: updatedUser });
       
-      toast.success('Profil berhasil diperbarui!');
+      toast.success('Fitur update profil sedang dalam pengembangan.');
     } catch (error) {
       toast.dismiss();
       console.error(error);
@@ -149,7 +145,7 @@ export default function Akun() {
               <input
                 type="text"
                 id="displayName"
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 value={editData.displayName}
                 onChange={(e) => setEditData({ ...editData, displayName: e.target.value })}
               />
@@ -168,8 +164,8 @@ export default function Akun() {
             </div>
             <button
               type="submit"
-              disabled={loading} // 7. Update tombol
-              className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+              disabled={loading}
+              className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
             >
               {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
             </button>
@@ -198,13 +194,13 @@ export default function Akun() {
           <div className="flex justify-center mb-6">
             <button
               onClick={() => setIsLogin(true)}
-              className={`py-2 px-6 ${isLogin ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}
+              className={`py-2 px-6 ${isLogin ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
             >
               Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`py-2 px-6 ${!isLogin ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}
+              className={`py-2 px-6 ${!isLogin ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
             >
               Daftar
             </button>
@@ -221,7 +217,7 @@ export default function Akun() {
                 <input
                   type="text"
                   id="login-username"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -234,7 +230,7 @@ export default function Akun() {
                 <input
                   type="password"
                   id="login-password"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -242,8 +238,8 @@ export default function Akun() {
               </div>
               <button
                 type="submit"
-                disabled={loading} // 7. Update tombol
-                className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+                disabled={loading}
+                className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
               >
                 {loading ? 'Loading...' : 'Login'}
               </button>
@@ -259,7 +255,7 @@ export default function Akun() {
                 <input
                   type="text"
                   id="reg-nama"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={namaLengkap}
                   onChange={(e) => setNamaLengkap(e.target.value)}
                   required
@@ -272,7 +268,7 @@ export default function Akun() {
                 <input
                   type="email"
                   id="reg-email"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -285,7 +281,7 @@ export default function Akun() {
                 <input
                   type="text"
                   id="reg-username"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -298,7 +294,7 @@ export default function Akun() {
                 <input
                   type="password"
                   id="reg-password"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -306,8 +302,8 @@ export default function Akun() {
               </div>
               <button
                 type="submit"
-                disabled={loading} // 7. Update tombol
-                className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+                disabled={loading}
+                className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
               >
                 {loading ? 'Mendaftar...' : 'Daftar'}
               </button>

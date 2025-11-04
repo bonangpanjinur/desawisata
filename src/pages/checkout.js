@@ -1,15 +1,21 @@
+// src/pages/checkout.js
+// PERBAIKAN: Mengubah impor default 'useCartStore' dan 'useAuthStore' menjadi impor bernama.
+// import useCartStore from '@/store/cartStore'; // <-- INI SALAH
+// import useAuthStore from '@/store/authStore'; // <-- INI SALAH
+import { useCartStore } from '@/store/cartStore'; // <-- INI BENAR
+import { useAuthStore } from '@/store/authStore'; // <-- INI BENAR
+
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import useCartStore from '@/store/cartStore';
-import useAuthStore from '@/store/authStore';
 import Layout from '@/components/Layout';
 import { apiGetAlamat, apiGetShippingOptions, apiCreateOrder } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import toast from 'react-hot-toast'; // Import toast
-import LoadingSpinner from '@/components/LoadingSpinner'; // Import loading spinner
+import toast from 'react-hot-toast'; 
+import LoadingSpinner from '@/components/LoadingSpinner'; 
 
 export default function CheckoutPage() {
   const router = useRouter();
+  // 'useCartStore' dan 'useAuthStore' sekarang adalah fungsi yang benar
   const { cart, getTotalPrice, clearCart, getCartGroupedBySeller } = useCartStore();
   const { user, token } = useAuthStore();
   
@@ -18,21 +24,21 @@ export default function CheckoutPage() {
   const [shippingOptions, setShippingOptions] = useState({});
   const [paymentMethod, setPaymentMethod] = useState('transfer_bank');
   
-  // State baru untuk loading dan error
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [loadingShipping, setLoadingShipping] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
 
-  // Memoize data keranjang yang dikelompokkan
-  const groupedCart = useMemo(() => getCartGroupedBySeller(), [cart]);
+  const groupedCart = useMemo(() => getCartGroupedBySeller(), [cart, getCartGroupedBySeller]);
 
   // 1. Redirect jika belum login atau keranjang kosong
   useEffect(() => {
     if (!token) {
       toast.error("Anda harus login untuk checkout.");
       router.push('/akun?redirect=/checkout');
+      return; // Tambahkan return agar tidak menjalankan kode di bawahnya
     }
-    if (cart.length === 0 && !loadingOrder) { // Jangan redirect jika sedang proses order
+    // Cek keranjang HANYA jika 'loadingOrder' false
+    if (cart.length === 0 && !loadingOrder) { 
       toast.error("Keranjang Anda kosong.");
       router.push('/keranjang');
     }
@@ -95,7 +101,7 @@ export default function CheckoutPage() {
       } catch (err) {
         console.error("Gagal hitung ongkir:", err);
         toast.error(`Gagal menghitung ongkir: ${err.message}`);
-        setShippingOptions({}); // Reset jika gagal
+        setShippingOptions({}); 
       } finally {
         setLoadingShipping(false);
       }
@@ -109,16 +115,15 @@ export default function CheckoutPage() {
     let totalShipping = 0;
     const choices = {};
     const sellerIds = Object.keys(groupedCart);
+    const productTotal = getTotalPrice(); // Ambil total produk
 
     if (sellerIds.length === 0 || Object.keys(shippingOptions).length === 0) {
-      return { totalShipping: 0, totalGrand: getTotalPrice(), choices: {} };
+      return { totalShipping: 0, totalGrand: productTotal, sellerShippingChoices: {} };
     }
 
-    // Default ke opsi pengiriman termurah untuk setiap penjual
     for (const sellerId of sellerIds) {
       const optionsForSeller = shippingOptions[sellerId]?.options;
       if (optionsForSeller && optionsForSeller.length > 0) {
-        // Urutkan berdasarkan harga termurah, prioritaskan selain 'tidak_tersedia'
         const sortedOptions = [...optionsForSeller].sort((a, b) => {
           if (a.metode === 'tidak_tersedia') return 1;
           if (b.metode === 'tidak_tersedia') return -1;
@@ -134,16 +139,14 @@ export default function CheckoutPage() {
             harga: cheapestOption.harga,
           };
         } else {
-          // Jika satu saja tidak tersedia, set pilihan ke 'tidak_tersedia'
           choices[sellerId] = { metode: 'tidak_tersedia', harga: null };
         }
       }
     }
     
-    const totalProduk = getTotalPrice();
     return { 
       totalShipping, 
-      totalGrand: totalProduk + totalShipping, 
+      totalGrand: productTotal + totalShipping, 
       sellerShippingChoices: choices 
     };
   }, [groupedCart, shippingOptions, getTotalPrice]);
@@ -151,7 +154,8 @@ export default function CheckoutPage() {
   // 5. Cek kesiapan order
   const isOrderReady = () => {
     if (!selectedAlamat || loadingAddress || loadingShipping || loadingOrder) return false;
-    if (Object.keys(sellerShippingChoices).length === 0 && cart.length > 0) return false;
+    // Cek jika cart ada tapi pilihan ongkir belum ada
+    if (cart.length > 0 && Object.keys(sellerShippingChoices).length === 0) return false;
     // Cek jika ada seller yang tidak punya opsi pengiriman
     return Object.values(sellerShippingChoices).every(choice => choice.metode !== 'tidak_tersedia');
   };
@@ -165,7 +169,6 @@ export default function CheckoutPage() {
 
     setLoadingOrder(true);
     
-    // Siapkan data item keranjang untuk API
     const cartItemsForApi = cart.map(item => ({
       product_id: item.productId,
       variation_id: item.variation?.id || 0,
@@ -185,21 +188,14 @@ export default function CheckoutPage() {
       const data = await apiCreateOrder(orderData);
       
       toast.success('Pesanan berhasil dibuat! Mengalihkan ke halaman pembayaran...');
-      
-      // Kosongkan keranjang
       clearCart();
-      
-      // Redirect ke halaman detail pesanan/pembayaran
       router.push(`/pesanan/${data.order_id}`);
 
     } catch (err) {
       console.error("Gagal membuat pesanan:", err);
       toast.error(`Gagal membuat pesanan: ${err.message}`);
-      setLoadingOrder(false); // Berhenti loading jika gagal
+      setLoadingOrder(false); 
     } 
-    // finally {
-    //   // Jangan set loading false di sini, biarkan halaman me-redirect
-    // }
   };
 
   return (
@@ -210,7 +206,6 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Kolom Kiri: Alamat & Pengiriman */}
           <div>
-            {/* --- Bagian Alamat --- */}
             <div className="bg-white p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-xl font-semibold mb-4">Alamat Pengiriman</h2>
               {loadingAddress ? (
@@ -232,7 +227,6 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* --- Bagian Opsi Pengiriman --- */}
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">Opsi Pengiriman</h2>
               {loadingShipping ? (
@@ -257,10 +251,9 @@ export default function CheckoutPage() {
                                   value={opt.metode}
                                   checked={selectedChoice?.metode === opt.metode}
                                   onChange={() => {
-                                    // Logika untuk mengubah pilihan ongkir (jika diperlukan)
-                                    // Saat ini otomatis pilih yg termurah
+                                    // Pilihan manual ongkir bisa ditambahkan di sini
                                   }}
-                                  disabled // Nonaktifkan pilihan manual untuk saat ini
+                                  disabled // Nonaktifkan pilihan manual
                                   className="mr-2"
                                 />
                                 {opt.nama}
@@ -290,7 +283,6 @@ export default function CheckoutPage() {
                 {cart.map(item => (
                   <div key={item.id} className="flex justify-between items-center mb-2">
                     <div>
-                      {/* PERBAIKAN SYNTAX ERROR: </pre> menjadi </p> */}
                       <p className="font-medium">{item.name} <span className="text-gray-600">x {item.quantity}</span></p>
                       <p className="text-sm text-gray-500">{item.toko?.nama_toko}</p>
                     </div>
@@ -314,11 +306,10 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* --- Tombol Buat Pesanan --- */}
               <button
                 onClick={handlePlaceOrder}
                 disabled={loadingAddress || loadingShipping || loadingOrder || !isOrderReady()}
-                className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg mt-6 hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg mt-6 hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {loadingOrder ? (
                   <span className="flex items-center justify-center">
@@ -333,7 +324,7 @@ export default function CheckoutPage() {
                 )}
               </button>
               
-              {!isOrderReady() && !loadingAddress && !loadingShipping && !loadingOrder && (
+              {!isOrderReady() && !loadingAddress && !loadingShipping && !loadingOrder && cart.length > 0 && (
                 <p className="text-red-600 text-sm mt-2 text-center">
                   Tidak dapat melanjutkan. Pastikan alamat dipilih dan pengiriman tersedia untuk semua toko.
                 </p>
@@ -345,4 +336,3 @@ export default function CheckoutPage() {
     </Layout>
   );
 }
-

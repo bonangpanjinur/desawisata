@@ -1,18 +1,31 @@
 // src/pages/keranjang.js
+// PERBAIKAN: 
+// 1. Mengganti destructuring `items` dan `total` dengan `cart` dan `getTotalPrice`.
+// 2. Mengganti `addItem` dengan `updateQuantity` untuk tombol +/-.
+// 3. Menggunakan `item.id` (composite key) untuk `removeItem` dan `updateQuantity`.
+// 4. Menghapus `isLoading` karena tidak ada di store.
+// 5. Menambahkan null check `(items || []).reduce` untuk keamanan SSR.
+
 import Layout from '@/components/Layout';
 import { useCartStore } from '@/store/cartStore';
 import { IconX, IconPlus, IconMinus, IconCart } from '@/components/icons';
 import Image from 'next/image';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils'; // Import formatCurrency
 
 const placeholderImg = "https://placehold.co/100x100/f4f4f5/a1a1aa?text=Sadesa";
 
 export default function KeranjangPage() {
-  const { items, total, addItem, removeItem, isLoading } = useCartStore();
+  // PERBAIKAN: Destructuring state dan fungsi yang benar dari store
+  const { cart: items, getTotalPrice, removeItem, updateQuantity } = useCartStore();
+  
+  // Panggil selector untuk mendapatkan total
+  const total = getTotalPrice(); 
 
   // Kelompokkan item berdasarkan toko
-  const itemsByToko = items.reduce((acc, item) => {
-    const tokoId = item.toko?.id_pedagang || 'toko-lain';
+  // PERBAIKAN: Tambahkan (items || []) untuk keamanan SSR
+  const itemsByToko = (items || []).reduce((acc, item) => {
+    const tokoId = item.sellerId || 'toko-lain';
     if (!acc[tokoId]) {
       acc[tokoId] = {
         nama_toko: item.toko?.nama_toko || 'Toko Lain',
@@ -27,9 +40,8 @@ export default function KeranjangPage() {
     <Layout>
       <h1 className="text-3xl font-bold mb-6">Keranjang Belanja</h1>
       
-      {isLoading && <p>Menyinkronkan keranjang...</p>}
-
-      {items.length === 0 && !isLoading ? (
+      {/* PERBAIKAN: Hapus referensi ke isLoading */}
+      {items.length === 0 ? (
         <div className="text-center py-10">
           <IconCart className="mx-auto h-24 w-24 text-gray-300" />
           <p className="mt-4 text-lg text-gray-500">Keranjang Anda kosong.</p>
@@ -46,41 +58,44 @@ export default function KeranjangPage() {
                 <h2 className="border-b p-4 text-lg font-semibold">{tokoData.nama_toko}</h2>
                 <div className="divide-y">
                   {tokoData.items.map(item => (
-                    <div key={`${item.product_id}-${item.variation_id}`} className="flex gap-4 p-4">
+                    // PERBAIKAN: Gunakan item.id (composite key) sebagai key
+                    <div key={item.id} className="flex gap-4 p-4">
                       <Image
-                        src={item.gambar_unggulan?.thumbnail || placeholderImg}
-                        alt={item.nama_produk}
+                        src={item.image || placeholderImg}
+                        alt={item.name}
                         width={80}
                         height={80}
                         className="rounded-lg object-cover"
                         onError={(e) => e.target.src = placeholderImg}
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold">{item.nama_produk}</h3>
-                        {item.deskripsi_variasi && (
-                          <p className="text-sm text-gray-500">{item.deskripsi_variasi}</p>
+                        <h3 className="font-semibold">{item.name}</h3>
+                        {item.variation && (
+                          <p className="text-sm text-gray-500">{item.variation.deskripsi}</p>
                         )}
                         <p className="mt-1 font-semibold text-primary">
-                          Rp {item.harga_satuan.toLocaleString('id-ID')}
+                          {formatCurrency(item.price)}
                         </p>
                       </div>
                       <div className="flex flex-col items-end justify-between">
-                        <button onClick={() => removeItem(item.product_id, item.variation_id)} className="text-gray-400 hover:text-red-500">
+                        {/* PERBAIKAN: Gunakan item.id untuk removeItem */}
+                        <button onClick={() => removeItem(item.id)} className="text-gray-400 hover:text-red-500">
                           <IconX className="h-5 w-5" />
                         </button>
                         <div className="flex items-center rounded-lg border">
+                          {/* PERBAIKAN: Gunakan updateQuantity */}
                           <button
-                            onClick={() => addItem(item.product_id, item.variation_id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             className="p-2 disabled:text-gray-300"
-                            disabled={item.quantity <= 1 || isLoading}
+                            disabled={item.quantity <= 1}
                           >
                             <IconMinus className="h-4 w-4" />
                           </button>
                           <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                          {/* PERBAIKAN: Gunakan updateQuantity */}
                           <button
-                            onClick={() => addItem(item.product_id, item.variation_id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="p-2 disabled:text-gray-300"
-                            disabled={isLoading}
                           >
                             <IconPlus className="h-4 w-4" />
                           </button>
@@ -99,7 +114,8 @@ export default function KeranjangPage() {
               <h2 className="text-xl font-semibold border-b pb-4">Ringkasan Belanja</h2>
               <div className="flex justify-between mt-4 text-lg">
                 <span>Total Harga Produk</span>
-                <span className="font-bold">Rp {total.toLocaleString('id-ID')}</span>
+                {/* PERBAIKAN: Gunakan 'total' (dari getTotalPrice) */}
+                <span className="font-bold">{formatCurrency(total)}</span>
               </div>
               <p className="text-sm text-gray-500 mt-2">Ongkos kirim akan dihitung saat checkout.</p>
               <Link href="/checkout" className="mt-6 block w-full rounded-lg bg-primary py-3 text-center text-lg font-semibold text-white shadow-lg transition-colors hover:bg-primary-dark">
@@ -112,4 +128,3 @@ export default function KeranjangPage() {
     </Layout>
   );
 }
-
