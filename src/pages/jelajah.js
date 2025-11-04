@@ -1,5 +1,5 @@
 // File: src/pages/jelajah.js
-// Menambahkan Filter Daerah dan Kategori
+// PERBAIKAN: Memperbaiki pengambilan data kategori di getServerSideProps
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -26,16 +26,17 @@ function useDebounce(value, delay) {
 export async function getServerSideProps() {
   // Ambil data filter (kategori & desa) dari server
   try {
-    const [kategoriData, desaData, kategoriWisataData] = await Promise.all([
-      apiFetch('/kategori-produk'),
+    const [kategoriProdukData, desaData, kategoriWisataData] = await Promise.all([
+      apiFetch('/kategori/produk'),
       apiFetch('/desa?per_page=100'), // Ambil daftar desa untuk filter
-      apiFetch('/kategori-wisata'), // Ambil kategori wisata
+      apiFetch('/kategori/wisata'), // Ambil kategori wisata
     ]);
     return {
       props: {
-        filterKategoriProduk: kategoriData.data || [],
-        filterKategoriWisata: kategoriWisataData.data || [],
-        filterDesa: desaData.data || [],
+        // PERBAIKAN: Endpoint kategori mengembalikan array langsung
+        filterKategoriProduk: kategoriProdukData || [],
+        filterKategoriWisata: kategoriWisataData || [],
+        filterDesa: desaData.data || [], // Endpoint desa memang dibungkus 'data'
       },
     };
   } catch (error) {
@@ -47,7 +48,6 @@ export async function getServerSideProps() {
 export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata, filterDesa }) {
   const router = useRouter();
   
-  // Tipe: 'produk' atau 'wisata'
   const [tipe, setTipe] = useState(router.query.tipe || 'produk'); 
   const [searchTerm, setSearchTerm] = useState(router.query.q || '');
   const [kategori, setKategori] = useState(router.query.kategori || '');
@@ -78,7 +78,7 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
           params.append('kategori', kategori);
         }
         if (desa) {
-          params.append('desa', desa); // API harus mendukung filter by desa ID
+          params.append('desa', desa);
         }
         
         const data = await apiFetch(`${endpoint}?${params.toString()}`);
@@ -118,7 +118,7 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={`Cari ${tipe === 'produk' ? 'produk' : 'wisata'}...`}
-            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-10 text-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-10 text-lg shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <IconSearch className="absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400" />
           {searchTerm && (
@@ -153,7 +153,7 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
             <select
               value={kategori}
               onChange={(e) => setKategori(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 px-4 pr-10 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 px-4 pr-10 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">Semua Kategori</option>
               {kategoriList.map(kat => (
@@ -167,7 +167,7 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
             <select
               value={desa}
               onChange={(e) => setDesa(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 px-4 pr-10 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 px-4 pr-10 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">Semua Daerah (Desa)</option>
               {filterDesa.map(d => (
@@ -202,4 +202,3 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
     </Layout>
   );
 }
-

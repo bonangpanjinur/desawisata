@@ -1,4 +1,5 @@
 // src/pages/desa/[id].js
+// PERBAIKAN: Mengganti `desa.banner` menjadi `desa.foto` sebagai fallback
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ProductCard from '@/components/ProductCard';
@@ -10,7 +11,6 @@ import { useRouter } from 'next/router';
 export async function getServerSideProps(context) {
   const { id } = context.params;
   try {
-    // Asumsi endpoint ini mengembalikan data desa, produk, dan wisatanya
     const data = await apiFetch(`/desa/${id}`);
     
     return { 
@@ -33,15 +33,19 @@ export default function DesaDetailPage({ desa, products, wisata }) {
     return <Layout><LoadingSpinner fullPage /></Layout>;
   }
 
+  // PERBAIKAN: Gunakan desa.foto karena desa.banner tidak ada di API
+  const bannerUrl = desa.foto || "https://placehold.co/1000x300/e2e8f0/a1a1aa?text=Banner+Desa";
+
   return (
     <Layout>
       {/* Header Desa */}
       <div className="mb-6 overflow-hidden rounded-lg bg-white shadow-lg">
         <div className="h-32 bg-gray-200 md:h-48">
           <img
-            src={desa.banner || "https://placehold.co/1000x300/e2e8f0/a1a1aa?text=Banner+Desa"}
+            src={bannerUrl}
             alt={`Banner ${desa.nama_desa}`}
             className="h-full w-full object-cover"
+            onError={(e) => (e.target.src = "https://placehold.co/1000x300/e2e8f0/a1a1aa?text=Banner+Desa")}
           />
         </div>
         <div className="p-4">
@@ -50,6 +54,7 @@ export default function DesaDetailPage({ desa, products, wisata }) {
               src={desa.foto || 'https://placehold.co/150x150/e2e8f0/a1a1aa?text=Logo'}
               alt={desa.nama_desa}
               className="h-24 w-24 rounded-full border-4 border-white bg-gray-200 object-cover shadow-md"
+              onError={(e) => (e.target.src = 'https://placehold.co/150x150/e2e8f0/a1a1aa?text=Logo')}
             />
             <div>
               <h1 className="text-2xl font-bold">{desa.nama_desa}</h1>
@@ -77,7 +82,6 @@ export default function DesaDetailPage({ desa, products, wisata }) {
             </p>
           )}
         </div>
-        {/* TODO: Tambahkan tombol Load More di sini */}
       </section>
 
       {/* Produk Unggulan Desa */}
@@ -94,7 +98,6 @@ export default function DesaDetailPage({ desa, products, wisata }) {
             </p>
           )}
         </div>
-        {/* TODO: Tambahkan tombol Load More di sini */}
       </section>
     </Layout>
   );

@@ -1,4 +1,5 @@
 // src/pages/wisata/[slug].js
+// PERBAIKAN: Menyesuaikan akses data dengan API & memperbaiki link Gmaps
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { apiFetch } from '@/lib/api';
@@ -12,7 +13,6 @@ const placeholderImg = "https://placehold.co/600x400/f4f4f5/a1a1aa?text=Wisata";
 export async function getServerSideProps(context) {
   const { slug } = context.params;
   try {
-    // Asumsi endpoint API adalah /wisata/slug/[slug]
     const wisata = await apiFetch(`/wisata/slug/${slug}`);
     return { props: { wisata } };
   } catch (error) {
@@ -29,6 +29,14 @@ export default function WisataDetailPage({ wisata }) {
   }
 
   const imageUrl = wisata.gambar_unggulan?.large || placeholderImg;
+  
+  // PERBAIKAN: Akses data yang benar dari struktur API
+  const namaDesa = wisata.desa?.nama_desa;
+  const idDesa = wisata.desa?.id;
+  // Gunakan alamat lengkap, atau kabupaten desa sebagai fallback
+  const alamatLengkap = wisata.lokasi?.alamat || (namaDesa ? `Desa ${namaDesa}` : 'Lokasi');
+  const hargaTiket = wisata.info?.harga_tiket || 0;
+  const koordinat = wisata.lokasi?.koordinat; // Ini adalah string "lat,lng"
 
   return (
     <Layout>
@@ -45,18 +53,18 @@ export default function WisataDetailPage({ wisata }) {
         </div>
 
         {/* Info Desa (jika ada) */}
-        {wisata.id_desa && (
-          <Link href={`/desa/${wisata.id_desa}`}>
+        {idDesa && namaDesa && (
+          <Link href={`/desa/${idDesa}`}>
             <div className="mb-4 flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50">
-              <img
-                src={wisata.foto_desa || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
-                alt={wisata.nama_desa}
-                className="h-12 w-12 rounded-full object-cover"
-              />
+              {/* PERBAIKAN: Hapus foto_desa karena tidak ada di API, gunakan ikon */}
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                <IconMapPin className="h-6 w-6" />
+              </div>
               <div>
-                <h3 className="font-semibold text-primary">{wisata.nama_desa}</h3>
+                <h3 className="font-semibold text-primary">{namaDesa}</h3>
+                {/* PERBAIKAN: Tampilkan alamat */}
                 <p className="flex items-center gap-1 text-sm text-gray-500">
-                  <IconMapPin className="h-4 w-4" /> {wisata.kabupaten_desa}
+                  {alamatLengkap}
                 </p>
               </div>
             </div>
@@ -69,39 +77,45 @@ export default function WisataDetailPage({ wisata }) {
         {/* Lokasi */}
         <div className="mb-4 flex items-center gap-2 text-gray-600">
             <IconMapPin className="h-5 w-5" />
-            <span className="font-semibold">{wisata.lokasi_singkat || 'Lokasi'}</span>
+            {/* PERBAIKAN: Tampilkan alamat */}
+            <span className="font-semibold">{alamatLengkap}</span>
         </div>
 
         {/* Harga Tiket */}
         <p className="mb-4 text-3xl font-bold text-primary">
-          {wisata.harga_tiket > 0 ? `Rp ${wisata.harga_tiket.toLocaleString('id-ID')}` : 'Gratis'}
-          <span className="text-base font-normal text-gray-500"> / orang</span>
+          {/* PERBAIKAN: Cek harga tiket yang benar dan formatnya */}
+          {typeof hargaTiket === 'number' && hargaTiket > 0 
+            ? `Rp ${hargaTiket.toLocaleString('id-ID')}`
+            : (typeof hargaTiket === 'string' ? hargaTiket : 'Gratis')
+          }
+          {typeof hargaTiket === 'number' && <span className="text-base font-normal text-gray-500"> / orang</span>}
         </p>
         
-        {/* Tombol Aksi (Contoh: Beli Tiket, Arahkan ke Google Maps) */}
+        {/* Tombol Aksi */}
         <div className="flex gap-4 mb-6">
             {/* <button
                 className="flex-1 rounded-lg bg-primary py-3 px-6 text-lg font-semibold text-white shadow-lg transition-colors hover:bg-primary-dark"
             >
                 Pesan Tiket
             </button> */}
-             <a
-                href={`https://www.google.com/maps/search/?api=1&query=${wisata.latitude},${wisata.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 rounded-lg border border-primary py-3 px-6 text-center text-lg font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5"
-            >
-                Lihat di Peta
-            </a>
+            {koordinat && (
+              <a
+                  // PERBAIKAN: Gunakan koordinat string "lat,lng" langsung
+                  href={`https://www.google.com/maps/search/?api=1&query=${koordinat}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded-lg border border-primary py-3 px-6 text-center text-lg font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5"
+              >
+                  Lihat di Peta
+              </a>
+            )}
         </div>
-
 
         {/* Deskripsi */}
         <div className="prose prose-sm mt-8 max-w-none border-t pt-6">
           <h3 className="font-semibold">Deskripsi Wisata</h3>
           <div dangerouslySetInnerHTML={{ __html: wisata.deskripsi || '<p>Tidak ada deskripsi.</p>' }} />
         </div>
-
       </div>
     </Layout>
   );

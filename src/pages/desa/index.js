@@ -1,5 +1,5 @@
 // File: src/pages/desa/index.js
-// Halaman BARU untuk menampilkan semua desa dengan filter daerah
+// PERBAIKAN: Memperbaiki endpoint API, pengambilan data provinsi, dan logika filter
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -7,7 +7,7 @@ import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
 import { IconSearch, IconChevronDown, IconMapPin } from '@/components/icons';
 
-// Helper untuk mengambil data dengan aman
+// Helper untuk mengambil data dengan aman (disimpan di sini)
 const safeGetData = (response) => {
   if (Array.isArray(response)) return response;
   return response?.data || [];
@@ -17,13 +17,15 @@ export async function getServerSideProps() {
   try {
     const [desaResponse, provinsiResponse] = await Promise.all([
       apiFetch('/desa?per_page=100'), // Ambil semua desa
-      apiFetch('/daerah/provinsi')   // Asumsi ada endpoint untuk provinsi
+      // PERBAIKAN: Endpoint API yang benar adalah /alamat/provinsi
+      apiFetch('/alamat/provinsi')   
     ]);
 
     return {
       props: {
-        allDesa: safeGetData(desaResponse),
-        filterProvinsi: safeGetData(provinsiResponse),
+        allDesa: safeGetData(desaResponse), // Ini sudah benar
+        // PERBAIKAN: Endpoint provinsi mengembalikan array langsung
+        filterProvinsi: provinsiResponse || [],
       },
     };
   } catch (error) {
@@ -35,8 +37,7 @@ export async function getServerSideProps() {
 export default function DesaIndexPage({ allDesa, filterProvinsi }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [provinsi, setProvinsi] = useState('');
-  // TODO: Tambahkan state untuk kabupaten jika API mendukung
-  // const [kabupaten, setKabupaten] = useState('');
+  // const [kabupaten, setKabupaten] = useState(''); // TODO
   
   const [filteredDesa, setFilteredDesa] = useState(allDesa);
 
@@ -50,11 +51,10 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
     }
 
     if (provinsi) {
-      desa = desa.filter(d => d.provinsi_id == provinsi);
+      // PERBAIKAN: Filter menggunakan `id_provinsi` dari data desa
+      desa = desa.filter(d => d.id_provinsi == provinsi);
     }
     
-    // TODO: Tambahkan filter kabupaten
-
     setFilteredDesa(desa);
   }, [searchTerm, provinsi, allDesa]);
 
@@ -71,7 +71,7 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Cari nama desa..."
-            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-4 text-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-4 text-lg shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <IconSearch className="absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400" />
         </div>
@@ -82,11 +82,12 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
             <select
               value={provinsi}
               onChange={(e) => setProvinsi(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 px-4 pr-10 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 px-4 pr-10 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">Semua Provinsi</option>
+              {/* PERBAIKAN: Gunakan p.code dan p.name dari API wilayah */}
               {filterProvinsi.map(p => (
-                <option key={p.id} value={p.id}>{p.nama}</option>
+                <option key={p.code} value={p.code}>{p.name}</option>
               ))}
             </select>
             <IconChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -105,10 +106,14 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
                   src={d.foto || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
                   alt={d.nama_desa}
                   className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
+                  onError={(e) => (e.target.src = 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa')}
                 />
                 <div className="flex-1 overflow-hidden">
                   <h3 className="truncate font-semibold">{d.nama_desa}</h3>
-                  <p className="mt-1 truncate text-sm text-gray-500">{d.kabupaten}</p>
+                  <p className="mt-1 truncate text-sm text-gray-500">
+                    <IconMapPin className="mr-1 inline-block h-4 w-4" />
+                    {d.kabupaten}, {d.provinsi}
+                  </p>
                 </div>
               </div>
             </Link>

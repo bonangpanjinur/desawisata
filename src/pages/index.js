@@ -1,12 +1,12 @@
 // File: src/pages/index.js
-// Menambahkan Search Bar dan Kategori Grid
+// PERBAIKAN: Memperbaiki pengambilan data `kategori` di getServerSideProps
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import ProductCard from '@/components/ProductCard';
 import WisataCard from '@/components/WisataCard';
 import BannerCarousel from '@/components/BannerCarousel';
-import KategoriGrid from '@/components/KategoriGrid'; // Impor KategoriGrid
+import KategoriGrid from '@/components/KategoriGrid';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
 import { IconArrowUpRight, IconMapPin, IconStore, IconSearch } from '@/components/icons';
@@ -20,7 +20,7 @@ export async function getServerSideProps() {
       apiFetch('/produk?unggulan=true&per_page=6'),
       apiFetch('/wisata?unggulan=true&per_page=6'),
       apiFetch('/desa?per_page=6'),
-      apiFetch('/kategori-produk?per_page=8'), // Ambil 8 kategori populer
+      apiFetch('/kategori/produk?per_page=8'), // Ambil 8 kategori populer
     ]);
 
     return {
@@ -29,7 +29,8 @@ export async function getServerSideProps() {
         featuredProducts: featuredProducts.data || [],
         featuredWisata: featuredWisata.data || [],
         desa: desa.data || [],
-        kategori: kategori.data || [], // Kirim data kategori
+        // PERBAIKAN: Endpoint kategori mengembalikan array langsung, bukan objek { data: [...] }
+        kategori: kategori || [],
       },
     };
   } catch (error) {
@@ -62,7 +63,7 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Cari produk, wisata, atau desa..."
-            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-4 text-base focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-full border border-gray-300 py-3 pl-12 pr-4 text-base shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary">
             <IconSearch className="h-6 w-6" />
@@ -74,10 +75,10 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
       <KategoriGrid kategori={kategori} />
       
       {/* Bagian Wisata Unggulan */}
-      <section className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
+      <section className="mb-10">
+        <div className="mb-4 flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-bold">Wisata Unggulan</h2>
-          <Link href="/jelajah?tipe=wisata" className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+          <Link href="/jelajah?tipe=wisata" className="flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark">
             Lihat Semua <IconArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -93,10 +94,10 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
       </section>
 
       {/* Bagian Produk Unggulan */}
-      <section className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
+      <section className="mb-10">
+        <div className="mb-4 flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-bold">Produk Unggulan</h2>
-          <Link href="/jelajah?tipe=produk" className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+          <Link href="/jelajah?tipe=produk" className="flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark">
             Lihat Semua <IconArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -113,7 +114,12 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
 
       {/* Bagian Desa */}
       <section>
-        <h2 className="text-2xl font-bold mb-4">Jelajahi Desa</h2>
+        <div className="mb-4 flex items-center justify-between border-b pb-2">
+          <h2 className="text-2xl font-bold">Jelajahi Desa</h2>
+            <Link href="/desa" className="flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark">
+              Lihat Semua <IconArrowUpRight className="h-4 w-4" />
+            </Link>
+        </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {desa.length > 0 ? (
             desa.map(d => (
@@ -140,4 +146,3 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
     </Layout>
   );
 }
-
