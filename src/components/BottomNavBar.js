@@ -20,9 +20,9 @@ const navItems = [
 export default function BottomNavBar() {
   const router = useRouter();
   
-  // Ambil 'cart' (nama state di store).
+  // PERBAIKAN: Ambil 'items' dari store (bukan 'cart')
   // Saat SSR, ini akan menjadi default state (yaitu '[]')
-  const cart = useCartStore(state => state.cart);
+  const items = useCartStore(state => state.items);
   
   // PERBAIKAN: Buat state 'cartItemCount'
   // Defaultnya 0 (ini yang akan dirender oleh server)
@@ -31,10 +31,10 @@ export default function BottomNavBar() {
   // PERBAIKAN: Gunakan useEffect
   // Kode di dalam useEffect HANYA berjalan di client, setelah komponen mount.
   useEffect(() => {
-    // Hitung jumlah item dari state 'cart' yang sudah terhidrasi
-    const count = (cart || []).reduce((acc, item) => acc + item.quantity, 0);
+    // PERBAIKAN: Hitung jumlah item dari state 'items' yang sudah terhidrasi
+    const count = (items || []).reduce((acc, item) => acc + item.quantity, 0);
     setCartItemCount(count);
-  }, [cart]); // Jalankan efek ini setiap kali 'cart' berubah
+  }, [items]); // PERBAIKAN: Jalankan efek ini setiap kali 'items' berubah
 
   return (
     <nav className="fixed bottom-0 left-0 z-40 w-full border-t bg-background shadow-lg md:hidden">
