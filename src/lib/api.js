@@ -2,7 +2,9 @@
 // VERSI LENGKAP - Termasuk fungsi Auth, Checkout, dan Pesanan
 import { useAuthStore } from '@/store/authStore';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/desawisata/v1';
+// --- PERBAIKAN KRITIS ---
+// Namespace API Anda di plugin adalah 'dw/v1', bukan 'desawisata/v1'.
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/dw/v1';
 
 /**
  * Fungsi helper universal untuk fetch API (GET)
@@ -208,4 +210,3 @@ export const apiConfirmPayment = async (orderId, paymentProofUrl, notes) => {
     notes: notes,
   });
 };
-

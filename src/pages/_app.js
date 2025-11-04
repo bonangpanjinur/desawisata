@@ -2,19 +2,21 @@
 import '@/styles/globals.css';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-// Hapus import useCartStore jika tidak digunakan di sini
-// import { useCartStore } from '@/store/cartStore';
+// import { useCartStore } from '@/store/cartStore'; // Hapus impor yang tidak terpakai
 
 export default function App({ Component, pageProps }) {
+  
+  // --- PERBAIKAN KRITIS ---
+  // Kode di bawah ini dihapus/dikomentari karena:
+  // 1. `useCartStore` (di file `src/store/cartStore.js`) tidak memiliki fungsi bernama `fetchCart`.
+  // 2. Ini menyebabkan error runtime di sisi klien dan menghentikan aplikasi.
+  // 3. Logika cart Anda saat ini murni berbasis Local Storage, jadi fetch saat load tidak diperlukan.
+  
   // const { user } = useAuthStore();
-  // const { fetchCart } = useCartStore(); // DIHAPUS: Fungsi ini tidak ada di cartStore.js
-
-  // Ambil keranjang dari backend setiap kali user (login/logout) berubah
+  // const { fetchCart } = useCartStore(); 
   // useEffect(() => {
-  //   fetchCart(); // DIHAPUS: Ini menyebabkan error
+  //   fetchCart(); 
   // }, [user, fetchCart]);
-
-  // Karena logic di atas dihapus, file _app.js menjadi lebih sederhana
-  // dan kita bisa hapus import yang tidak terpakai.
+  
   return <Component {...pageProps} />;
 }
