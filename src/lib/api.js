@@ -1,20 +1,18 @@
 /**
  * LOKASI FILE: src/lib/api.js
- * PERBAIKAN: Menambahkan 'export' di depan 'apiFetch' dan 'apiUploadFile'
- * agar bisa diimpor oleh file lain.
+ * PERBAIKAN: 
+ * 1. Menambahkan 'export' di depan 'apiFetch' dan 'apiUploadFile'.
+ * 2. Menambahkan fungsi 'apiGetReviews' yang hilang.
  */
 import axios from 'axios';
-import { useAuthStore } from '@/store/authStore'; // PERBAIKAN: Impor bernama
+import { useAuthStore } from '@/store/authStore'; 
 
-// Tentukan BASE_URL dari environment variables, dengan fallback
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/dw/v1';
 
-// PERBAIKAN: Tambahkan 'export' agar bisa di-import file lain
-export const apiFetch = axios.create({
+export const apiFetch = axios.create({ // PERBAIKAN: export
   baseURL: BASE_URL,
 });
 
-// Interceptor untuk menambahkan token ke setiap request
 apiFetch.interceptors.request.use(
   (config) => {
     const { token } = useAuthStore.getState();
@@ -100,6 +98,12 @@ export const apiGetPublicSettings = async () => {
   return data;
 };
 
+// --- FUNGSI BARU YANG HILANG ---
+export const apiGetReviews = async (target_type, target_id, params) => {
+  const { data } = await apiFetch.get(`/reviews/${target_type}/${target_id}`, { params });
+  return data;
+};
+
 // --- DATA PEMBELI (AUTH) ---
 export const apiGetAlamat = async () => {
   const { data } = await apiFetch.get('/pembeli/addresses');
@@ -131,8 +135,7 @@ export const apiConfirmPayment = async (payload) => {
   return data;
 };
 
-// PERBAIKAN: Tambahkan 'export'
-export const apiUploadFile = async (file) => {
+export const apiUploadFile = async (file) => { // PERBAIKAN: export
   const formData = new FormData();
   formData.append('file', file);
   

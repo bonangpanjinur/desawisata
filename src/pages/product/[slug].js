@@ -1,122 +1,30 @@
-// src/pages/product/[slug].js
-// PERBAIKAN: Menambahkan feedback 'toast' dan validasi
-// saat menambah barang ke keranjang.
-
-import { useState, useEffect } from 'react';
+/**
+ * LOKASI FILE: src/pages/product/[slug].js
+ * PERBAIKAN: 
+ * 1. Mengganti 'apiGetProductBySlug' menjadi 'apiGetProdukDetail'.
+ * 2. Mengganti 'apiGetReviews' (yang hilang) dengan impor yang benar.
+ */
+import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { apiGetProductBySlug, apiGetReviews } from '@/lib/api';
+import { apiGetProdukDetail, apiGetReviews } from '@/lib/api'; // PERBAIKAN NAMA FUNGSI
 import Layout from '@/components/Layout';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils';
+import { useCartStore } from '@/store/cartStore'; // Impor bernama
+import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Star } from 'lucide-react';
-import useCartStore from '@/store/cartStore';
-import { toast } from 'react-hot-toast'; // 1. Impor toast
 
-// Komponen Rating Bintang (helper)
-const RatingStars = ({ rating, reviewCount }) => {
-// ... (fungsi ini tetap sama)
-// ...
-  const stars = [];
-// ...
-  return (
-    <div className="flex items-center">
-      {stars}
-      <span className="text-sm text-gray-500 ml-2">({reviewCount} ulasan)</span>
-    </div>
-  );
-};
-
-export default function ProductDetail() {
+export default function ProductDetail({ product, reviews }) {
   const router = useRouter();
-  const { slug } = router.query;
-  const [product, setProduct] = useState(null);
-  const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1);
+  const { addItem } = useCartStore(); // Impor bernama
   const [selectedVariation, setSelectedVariation] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(false); // State loading untuk tombol
 
-  // 2. Tambahkan state loading untuk tombol
-  const [loadingCart, setLoadingCart] = useState(false);
-
-  const { addToCart } = useCartStore();
-
-  useEffect(() => {
-    if (slug) {
-      const fetchData = async () => {
-        setLoading(true);
-        try {
-          const productData = await apiGetProductBySlug(slug);
-          setProduct(productData);
-          
-          if (productData.variasi && productData.variasi.length > 0) {
-            // Opsional: set variasi default jika ada
-            // setSelectedVariation(productData.variasi[0]);
-          }
-
-          // Ambil ulasan
-          const reviewData = await apiGetReviews('produk', productData.id);
-          setReviews(reviewData.reviews || []);
-
-        } catch (error) {
-          console.error('Gagal mengambil detail produk:', error);
-          toast.error('Gagal memuat produk.');
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchData();
-    }
-  }, [slug]);
-
-  // 3. Perbarui fungsi handleAddToCart
-  const handleAddToCart = () => {
-    if (loadingCart) return; // Cegah klik ganda
-
-    // 4. Tambahkan validasi variasi
-    if (product.variasi && product.variasi.length > 0 && !selectedVariation) {
-      toast.error('Silakan pilih variasi (ukuran/tipe) terlebih dahulu.');
-      return;
-    }
-
-    setLoadingCart(true); // Set loading
-
-    try {
-      // Panggil fungsi add to cart dari store
-      addToCart(product, selectedVariation, quantity);
-
-      // 5. Tampilkan notifikasi sukses
-      const itemName = selectedVariation 
-        ? `${product.nama_produk} (${selectedVariation.deskripsi_variasi})` // Gunakan nama field yang benar
-        : product.nama_produk;
-      
-      toast.success(`${itemName} (x${quantity}) berhasil ditambahkan ke keranjang!`);
-      
-      // Reset (Opsional)
-      // setQuantity(1);
-      // setSelectedVariation(null);
-
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message || 'Gagal menambahkan ke keranjang.');
-    } finally {
-      setLoadingCart(false); // Selesai loading
-    }
-  };
-
-  const handleQuantityChange = (amount) => {
-    setQuantity((prev) => Math.max(1, prev + amount));
-  };
-  
-  const handleVariationChange = (e) => {
-    const variationId = parseInt(e.target.value, 10);
-    const variation = product.variasi.find(v => v.id === variationId);
-    setSelectedVariation(variation);
-  };
-
-  if (loading) {
+  if (router.isFallback) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-screen">
+        <div className="flex justify-center items-center min-h-screen">
           <LoadingSpinner />
         </div>
       </Layout>
@@ -124,148 +32,171 @@ export default function ProductDetail() {
   }
 
   if (!product) {
-    return (
-      <Layout>
-        <div className="container mx-auto p-4 text-center">
-          <h1 className="text-2xl font-bold">Produk tidak ditemukan.</h1>
-        </div>
-      </Layout>
-    );
+    return <Layout><p>Produk tidak ditemukan.</p></Layout>;
   }
 
-  // Tentukan harga yang ditampilkan
-  const displayPrice = selectedVariation
-    ? selectedVariation.harga_variasi
-    : (product.harga_dasar || 0);
+  const hasVariations = product.variasi && product.variasi.length > 0;
+  const mainImage = product.gambar_unggulan?.large || product.galeri_foto?.[0]?.large || '/placeholder-large.png';
+
+  const handleAddToCart = () => {
+    if (loading) return; // Cegah klik ganda
+
+    // Validasi: Wajib pilih variasi jika ada
+    if (hasVariations && !selectedVariation) {
+      toast.error('Silakan pilih variasi terlebih dahulu.');
+      return;
+    }
+
+    setLoading(true);
+    toast.loading('Menambahkan ke keranjang...');
+
+    // Tentukan variasi yang akan dikirim ke store
+    const variationToAdd = hasVariations ? selectedVariation : null;
+
+    // Logika penambahan item (dari store)
+    addItem(product, variationToAdd, quantity);
+
+    setLoading(false);
+    toast.dismiss();
+    toast.success(`${product.nama_produk} berhasil ditambahkan!`);
+
+    // Reset quantity
+    setQuantity(1);
+    setSelectedVariation(null);
+  };
+
+  const handleVariationChange = (e) => {
+    const variationId = e.target.value;
+    const variation = product.variasi.find(v => v.id == variationId);
+    setSelectedVariation(variation);
+  };
+
+  const getPrice = () => {
+    if (selectedVariation) {
+      return selectedVariation.harga_variasi;
+    }
+    if (hasVariations) {
+      return null; // Tampilkan rentang harga atau teks "Pilih variasi"
+    }
+    return product.harga_dasar;
+  };
+
+  const displayPrice = getPrice();
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 max-w-4xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* Kolom Gambar */}
-          <div>
-            <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-24">
-              <img
-                src={product.gambar_unggulan?.large || product.galeri_foto?.[0]?.large || "https://placehold.co/600x600/f4f4f5/a1a1aa?text=Sadesa"}
-                alt={product.nama_produk}
-                className="w-full h-96 object-cover"
-              />
-              {/* TODO: Tambahkan thumbnail galeri di sini jika 'product.galeri_foto' punya > 1 gambar */}
+      <div className="container mx-auto max-w-4xl p-4">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="md:flex">
+            {/* Kolom Gambar */}
+            <div className="md:w-1/2">
+              <img src={mainImage} alt={product.nama_produk} className="w-full h-64 md:h-full object-cover" />
+              {/* TODO: Galeri foto thumbnail */}
             </div>
-          </div>
 
-          {/* Kolom Detail */}
-          <div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h1 className="text-3xl font-bold mb-3">{product.nama_produk}</h1>
-              <div className="mb-4">
-                <RatingStars rating={product.rating?.average || 0} reviewCount={product.rating?.count || 0} />
-              </div>
-              <p className="text-3xl font-bold text-green-600 mb-4">
-                Rp {formatCurrency(displayPrice)}
-              </p>
-              
-              {/* Info Toko */}
-              {product.toko && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
-                  <p className="text-sm text-gray-600">Dijual oleh:</p>
-                  <a href={`/toko/${product.toko.id_pedagang}`} className="font-semibold text-green-700 hover:underline">
-                    {product.toko.nama_toko}
-                  </a>
-                  <p className="text-sm text-gray-500">{product.toko.nama_desa}</p>
+            {/* Kolom Info */}
+            <div className="md:w-1/2 p-6 flex flex-col justify-between">
+              <div>
+                <a onClick={() => router.push(`/toko/${product.toko.id_pedagang}`)} className="text-sm text-blue-600 hover:underline cursor-pointer">{product.toko.nama_toko}</a>
+                <h1 className="text-3xl font-bold mt-1 mb-2">{product.nama_produk}</h1>
+                
+                <div className="flex items-center mb-4">
+                  <Star className="text-yellow-400 fill-yellow-400" size={20} />
+                  <span className="ml-1 font-semibold">{product.rating.average}</span>
+                  <span className="ml-2 text-gray-500">({product.rating.count} ulasan)</span>
                 </div>
-              )}
+                
+                {/* Harga */}
+                <div className="text-3xl font-bold text-green-600 mb-4">
+                  {displayPrice !== null ? (
+                    `Rp ${formatCurrency(displayPrice)}`
+                  ) : (
+                    <span className="text-xl">Pilih variasi untuk harga</span>
+                  )}
+                </div>
 
-              {/* Pilihan Variasi */}
-              {product.variasi && product.variasi.length > 0 && (
+                {/* Variasi */}
+                {hasVariations && (
+                  <div className="mb-4">
+                    <label htmlFor="variation" className="block text-sm font-medium text-gray-700 mb-1">Pilih Variasi:</label>
+                    <select
+                      id="variation"
+                      value={selectedVariation?.id || ''}
+                      onChange={handleVariationChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="">-- Pilih --</option>
+                      {product.variasi.map(v => (
+                        <option key={v.id} value={v.id}>
+                          {v.deskripsi} (Rp {formatCurrency(v.harga_variasi)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Kuantitas */}
                 <div className="mb-4">
-                  <label htmlFor="variasi" className="block text-sm font-medium text-gray-700 mb-2">Pilih Variasi:</label>
-                  <select
-                    id="variasi"
-                    name="variasi"
-                    value={selectedVariation?.id || ''}
-                    onChange={handleVariationChange}
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="" disabled>-- Pilih Opsi --</option>
-                    {product.variasi.map(v => (
-                      <option key={v.id} value={v.id}>
-                        {v.deskripsi_variasi} (Rp {formatCurrency(v.harga_variasi)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Pilihan Kuantitas */}
-              <div className="mb-6">
-                <label htmlFor="kuantitas" className="block text-sm font-medium text-gray-700 mb-2">Kuantitas:</label>
-                <div className="flex items-center">
-                  <button
-                    onClick={() => handleQuantityChange(-1)}
-                    className="px-3 py-1 border rounded-l-lg hover:bg-gray-100"
-                  >
-                    -
-                  </button>
+                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">Kuantitas:</label>
                   <input
                     type="number"
-                    id="kuantitas"
-                    name="kuantitas"
+                    id="quantity"
                     value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-16 text-center border-t border-b"
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value)))}
+                    min="1"
+                    className="w-20 p-2 border rounded-md"
                   />
-                  <button
-                    onClick={() => handleQuantityChange(1)}
-                    className="px-3 py-1 border rounded-r-lg hover:bg-gray-100"
-                  >
-                    +
-                  </button>
                 </div>
               </div>
 
-              {/* Tombol Add to Cart */}
-              <button
-                onClick={handleAddToCart}
-                // 6. Update tombol disabled dan teks
-                disabled={loadingCart}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
-              >
-                {loadingCart ? 'Menambahkan...' : 'Tambah ke Keranjang'}
-              </button>
+              {/* Tombol Aksi */}
+              <div className="mt-6">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={loading || (hasVariations && !selectedVariation)}
+                  className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <LoadingSpinner /> Menambahkan...
+                    </span>
+                  ) : "Tambah ke Keranjang"}
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
 
-            {/* Deskripsi Produk */}
-            <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-              <h2 className="text-xl font-semibold mb-3">Deskripsi Produk</h2>
-              <div
-                className="prose max-w-none text-gray-700"
-                dangerouslySetInnerHTML={{ __html: product.deskripsi || '<p>Tidak ada deskripsi.</p>' }}
-              />
-            </div>
-
-            {/* Ulasan */}
-            <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-              <h2 className="text-xl font-semibold mb-4">Ulasan Pembeli ({reviews.length})</h2>
-              {reviews.length > 0 ? (
-                <div className="space-y-4">
-                  {reviews.map(review => (
-                    <div key={review.id} className="border-b pb-4">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-semibold">{review.display_name}</span>
-                        <span className="text-sm text-gray-500">{review.tanggal_formatted}</span>
-                      </div>
-                      <RatingStars rating={review.rating} reviewCount={0} />
-                      <p className="text-gray-700 mt-2">{review.komentar}</p>
+        {/* Deskripsi & Ulasan */}
+        <div className="bg-white rounded-lg shadow-lg mt-6 p-6">
+          <h2 className="text-2xl font-semibold mb-4">Deskripsi Produk</h2>
+          <div
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: product.deskripsi || '<p>Tidak ada deskripsi.</p>' }}
+          />
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-lg mt-6 p-6">
+          <h2 className="text-2xl font-semibold mb-4">Ulasan Pembeli ({reviews?.total || 0})</h2>
+          <div className="space-y-4">
+            {reviews && reviews.reviews.length > 0 ? (
+              reviews.reviews.map(review => (
+                <div key={review.id} className="border-b pb-4">
+                  <div className="flex items-center mb-1">
+                    <span className="font-semibold">{review.display_name}</span>
+                    <div className="flex ml-3">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={16} className={i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                  <p className="text-gray-600">{review.komentar}</p>
+                  <p className="text-xs text-gray-400 mt-1">{review.tanggal_formatted}</p>
                 </div>
-              ) : (
-                <p>Belum ada ulasan untuk produk ini.</p>
-              )}
-            </div>
-
+              ))
+            ) : (
+              <p>Belum ada ulasan untuk produk ini.</p>
+            )}
           </div>
         </div>
       </div>
@@ -273,21 +204,47 @@ export default function ProductDetail() {
   );
 }
 
-// Fungsi getServerSideProps (tetap sama)
-export async function getServerSideProps(context) {
-// ...
-  const { slug } = context.params;
+// Fungsi GetStaticPaths dan GetStaticProps
+export async function getStaticPaths() {
+  let products = [];
   try {
-    const productData = await apiGetProductBySlug(slug);
+    const data = await apiGetProduk({ per_page: 20 }); // Ambil 20 produk terbaru untuk paths
+    products = data.data;
+  } catch (error) {
+    console.error("Gagal fetch paths produk:", error);
+  }
+  
+  const paths = products.map(product => ({
+    params: { slug: product.slug },
+  }));
+
+  return { paths, fallback: 'blocking' };
+}
+
+export async function getStaticProps({ params }) {
+  try {
+    const product = await apiGetProdukDetail(params.slug); // PERBAIKAN NAMA FUNGSI
+    let reviews = null;
+    try {
+      reviews = await apiGetReviews('produk', product.id, { per_page: 5 }); // Ambil 5 ulasan
+    } catch (reviewError) {
+      console.error("Gagal fetch review:", reviewError.message);
+      // Tetap lanjutkan meski review gagal
+    }
+
     return {
       props: {
-        initialProduct: productData,
+        product: product || null,
+        reviews: reviews || null,
       },
+      revalidate: 60, // Revalidasi setiap 60 detik
     };
   } catch (error) {
-    console.error('GSS Error:', error);
+    console.error(`Gagal fetch data produk ${params.slug}:`, error.message);
     return {
       notFound: true,
+      revalidate: 10,
     };
   }
 }
+

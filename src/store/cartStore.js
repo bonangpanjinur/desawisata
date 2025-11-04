@@ -1,12 +1,14 @@
 /**
  * LOKASI FILE: src/store/cartStore.js
- * PERBAIKAN: Mengubah 'export default' menjadi 'export const' agar sesuai
- * dengan cara file ini diimpor di komponen lain (seperti Header.js).
+ * PERBAIKAN: 
+ * 1. Mengembalikan ke `export const` (bukan default).
+ * 2. Menambahkan null check ( `cart?.reduce` ) di helper 
+ * untuk memperbaiki error 'reduce' of undefined saat prerender.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiSyncMyCart } from '@/lib/api'; // Import API
-import { useAuthStore } from './authStore'; // PERBAIKAN: Impor bernama
+import { apiSyncMyCart } from '@/lib/api'; 
+import { useAuthStore } from './authStore'; 
 
 // Helper untuk debounce (menunda eksekusi)
 function debounce(func, wait) {
@@ -23,18 +25,18 @@ function debounce(func, wait) {
 
 // Buat fungsi debounced untuk sinkronisasi
 const debouncedSyncCart = debounce(async (cart) => {
+  if (!cart) return; // Tambahan keamanan
   const { token } = useAuthStore.getState();
-  if (token && cart.length > 0) { // Hanya sync jika login dan keranjang tidak kosong
+  if (token && cart.length > 0) { 
     try {
-      // console.log("Debounced Sync: Menyimpan keranjang ke server...", cart);
-      await apiSyncMyCart(cart); // Cukup kirim, tidak perlu menunggu balasan
+      await apiSyncMyCart(cart); 
     } catch (error) {
       console.error("Gagal sinkronisasi keranjang (debounced):", error);
     }
   }
-}, 1500); // Tunda 1.5 detik setelah aksi terakhir
+}, 1500); 
 
-export const useCartStore = create( // PERBAIKAN: Menjadi 'export const'
+export const useCartStore = create( // PERBAIKAN: 'export const'
   persist(
     (set, get) => ({
       cart: [],
@@ -49,8 +51,8 @@ export const useCartStore = create( // PERBAIKAN: Menjadi 'export const'
           quantity,
           image: product.gambar_unggulan?.thumbnail || product.galeri_foto?.[0]?.thumbnail || '/placeholder.png',
           variation: variation ? { id: variation.id, deskripsi: variation.deskripsi_variasi } : null,
-          toko: product.toko, // Simpan info toko
-          sellerId: product.toko.id_pedagang, // Simpan ID pedagang
+          toko: product.toko, 
+          sellerId: product.toko.id_pedagang, 
         };
 
         const existingItem = get().cart.find((i) => i.id === item.id);
@@ -91,20 +93,20 @@ export const useCartStore = create( // PERBAIKAN: Menjadi 'export const'
       // Aksi untuk mengosongkan keranjang
       clearCart: () => {
         set({ cart: [] });
-        // Tidak perlu panggil debouncedSyncCart, karena authStore akan panggil apiClearMyCart
       },
 
       // Fungsi helper
+      // PERBAIKAN: Tambahkan 'cart?' untuk mengatasi error prerender
       getTotalPrice: () => {
-        return get().cart.reduce((total, item) => total + item.price * item.quantity, 0);
+        return get().cart?.reduce((total, item) => total + item.price * item.quantity, 0) || 0;
       },
       
       getTotalItems: () => {
-        return get().cart.reduce((total, item) => total + item.quantity, 0);
+        return get().cart?.reduce((total, item) => total + item.quantity, 0) || 0;
       },
 
       getCartGroupedBySeller: () => {
-        return get().cart.reduce((acc, item) => {
+        return get().cart?.reduce((acc, item) => {
           const sellerId = item.sellerId || 'toko_lain';
           if (!acc[sellerId]) {
             acc[sellerId] = {
@@ -114,11 +116,11 @@ export const useCartStore = create( // PERBAIKAN: Menjadi 'export const'
           }
           acc[sellerId].items.push(item);
           return acc;
-        }, {});
+        }, {}) || {}; // Kembalikan objek kosong jika cart undefined
       },
     }),
     {
-      name: 'cart-storage', // nama key di localStorage
+      name: 'cart-storage', 
     }
   )
 );
