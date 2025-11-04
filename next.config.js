@@ -1,15 +1,28 @@
 // File: next.config.js
-// INI FILE BARU. File ini sangat penting untuk memperbaiki error gambar.
+// LOKASI: Folder utama (root)
+//
+// Menggunakan format 'remotePatterns' yang lebih modern
+// Ini menggantikan format 'domains' yang lama
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    // Mendaftarkan domain-domain yang boleh diakses oleh komponen <Image>
-    domains: [
-      'admin.sadesa.site', // Domain backend WordPress Anda
-      'placehold.co',      // Domain placeholder
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'admin.sadesa.site',
+        port: '',
+        pathname: '/**', // Izinkan semua path di domain ini
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**', // Izinkan semua path di domain ini
+      },
     ],
   },
 };
 
 module.exports = nextConfig;
+
