@@ -1,87 +1,69 @@
-// src/store/authStore.js
+// File: src/store/authStore.js
+// PERBAIKAN: Menambahkan fungsi register, memperbaiki login, dan implementasi persist
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { apiFetch } from '@/lib/api';
+import { apiLogin, apiRegister } from '@/lib/api'; // Impor fungsi API baru
 
 export const useAuthStore = create(
   persist(
-    (set, get) => ({
-      user: null,         // Data user (id, email, display_name, roles)
-      token: null,        // Access Token JWT
-      refreshToken: null,
-      isLoading: false,
-      error: null,
+    (set) => ({
+      user: null,
+      token: null,
+      
+      /**
+       * Menetapkan pengguna dan token ke state
+       */
+      setUser: (userData, authToken) => {
+        set({ user: userData, token: authToken });
+      },
 
-      // Aksi Login
+      /**
+       * Fungsi Login
+       * PERBAIKAN: Menggunakan apiLogin yang baru
+       */
       login: async (username, password) => {
-        set({ isLoading: true, error: null });
         try {
-          const data = await apiFetch('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-          });
-          set({
-            user: data.user,
-            token: data.token.access_token,
-            refreshToken: data.token.refresh_token,
-            isLoading: false,
-          });
-          return true;
-        } catch (error) {
-          set({ isLoading: false, error: error.message });
-          return false;
-        }
-      },
-
-      // Aksi Register (Pembeli Biasa)
-      register: async (username, email, password, display_name) => {
-        set({ isLoading: true, error: null });
-        try {
-          await apiFetch('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify({ username, email, password, display_name }),
-          });
-          // Setelah register, langsung login
-          return await get().login(username, password);
-        } catch (error) {
-          set({ isLoading: false, error: error.message });
-          return false;
-        }
-      },
-
-      // Aksi Logout
-      logout: async () => {
-        set({ isLoading: true, error: null });
-        const { refreshToken } = get();
-        if (refreshToken) {
-          try {
-            // Beri tahu backend untuk mencabut token
-            await apiFetch('/auth/logout', {
-              method: 'POST',
-              body: JSON.stringify({ refresh_token: refreshToken }),
-            });
-          } catch (error) {
-            // Tetap logout di frontend meskipun API gagal
-            console.error("API logout error:", error.message);
+          // Panggil apiLogin dari lib/api.js
+          const data = await apiLogin(username, password);
+          if (data.token && data.user_data) {
+            set({ user: data.user_data, token: data.token });
+            return data;
           }
+          throw new Error(data.message || 'Data login tidak valid');
+        } catch (error) {
+          console.error("Login Gagal di Store:", error);
+          throw error; // Lempar error agar bisa ditangkap UI
         }
-        // Hapus data dari state
-        set({
-          user: null,
-          token: null,
-          refreshToken: null,
-          isLoading: false,
-          error: null,
-        });
       },
 
-      // TODO: Fungsi untuk refresh token (bisa dipanggil di _app.js)
-      // refreshToken: async () => { ... }
+      /**
+       * Fungsi Register (BARU)
+       */
+      register: async (username, email, password, namaLengkap) => {
+        try {
+          // Panggil apiRegister dari lib/api.js
+          const data = await apiRegister(username, email, password, namaLengkap);
+          // Anda bisa memilih untuk login otomatis setelah register, 
+          // atau hanya menampilkan pesan sukses
+          return data; // Mengembalikan { message: '...' }
+        } catch (error) {
+          console.error("Register Gagal di Store:", error);
+          throw error; // Lempar error agar bisa ditangkap UI
+        }
+      },
+
+      /**
+       * Fungsi Logout
+       */
+      logout: () => {
+        set({ user: null, token: null });
+        // Hapus juga data keranjang saat logout
+        // (Jika Anda menggunakan persist di cartStore, panggil cartStore.clearCart())
+      },
     }),
     {
-      name: 'sadesa-auth-storage', // Nama item di localStorage
-      storage: createJSONStorage(() => localStorage),
+      name: 'auth-storage', // Nama key di localStorage
+      storage: createJSONStorage(() => localStorage), // Gunakan localStorage
     }
   )
 );
-

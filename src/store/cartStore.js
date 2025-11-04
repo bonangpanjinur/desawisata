@@ -1,67 +1,111 @@
-// src/store/cartStore.js
+// File: src/store/cartStore.js
+// VERSI LENGKAP
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { apiFetch } from '@/lib/api';
-
-// Ini adalah store yang SINKRON dengan API
-// Perubahan di sini idealnya juga memanggil API /cart/me
 
 export const useCartStore = create(
   persist(
     (set, get) => ({
-      items: [], // Array dari { product_id, variation_id, quantity, ...dataProduk }
-      total: 0,
-      isLoading: false,
-      error: null,
+      items: [], // Array untuk menyimpan item: { id, name, price, quantity, image, variation_name, seller_id, nama_toko }
 
-      // Mengambil keranjang dari backend (saat login atau load)
-      fetchCart: async () => {
-        set({ isLoading: true });
-        try {
-          const data = await apiFetch('/cart/me');
-          set({ items: data.items, total: data.total, isLoading: false });
-        } catch (error) {
-          set({ isLoading: false, error: error.message });
-        }
-      },
+      /**
+       * Menambah item ke keranjang
+       * @param {object} product - Objek produk lengkap
+       * @param {object|null} variation - Objek variasi (jika ada)
+       * @param {number} quantity - Jumlah yang ditambahkan
+       */
+      addItem: (product, variation, quantity) => {
+        const { items } = get();
+        const existingItemIndex = items.findIndex(
+          (item) => item.id === product.id && item.variation_id === (variation ? variation.id : null)
+        );
 
-      // Menambah/Update item
-      addItem: async (product_id, variation_id = 0, quantity = 1) => {
-        set({ isLoading: true });
-        try {
-          const data = await apiFetch('/cart/me', {
-            method: 'POST',
-            body: JSON.stringify({ product_id, variation_id, quantity }),
+        let newItems = [...items];
+
+        if (existingItemIndex > -1) {
+          // Item sudah ada, update quantity
+          newItems[existingItemIndex] = {
+            ...newItems[existingItemIndex],
+            quantity: newItems[existingItemIndex].quantity + quantity,
+          };
+        } else {
+          // Item baru
+          newItems.push({
+            id: product.id, // product_id
+            product_id: product.id, // duplikat untuk checkout
+            name: product.nama_produk,
+            price: variation ? variation.harga : product.harga,
+            quantity: quantity,
+            image: (product.gambar_produk && product.gambar_produk[0]) ? product.gambar_produk[0] : 'https://placehold.co/100x100?text=Produk',
+            variation_id: variation ? variation.id : null,
+            variation_name: variation ? variation.nama_variasi : null,
+            // PENTING: Pastikan data ini ada di 'product' saat addItem dipanggil
+            seller_id: product.pedagang_id, 
+            nama_toko: product.nama_toko,
           });
-          set({ items: data.items, total: data.total, isLoading: false });
-        } catch (error) {
-          set({ isLoading: false, error: error.message });
         }
+
+        set({ items: newItems });
       },
 
-      // Menghapus item
-      removeItem: async (product_id, variation_id = 0) => {
-        set({ isLoading: true });
-        try {
-          const data = await apiFetch('/cart/me', {
-            method: 'DELETE',
-            body: JSON.stringify({ product_id, variation_id }),
-          });
-          set({ items: data.items, total: data.total, isLoading: false });
-        } catch (error) {
-          set({ isLoading: false, error: error.message });
-        }
+      /**
+       * Menghapus item dari keranjang
+       * @param {number} id - ID Produk
+       * @param {number|null} variation_id - ID Variasi
+       */
+      removeItem: (id, variation_id) => {
+        const { items } = get();
+        const newItems = items.filter(
+          (item) => !(item.id === id && item.variation_id === variation_id)
+        );
+        set({ items: newItems });
       },
-      
-      // Mengosongkan keranjang (helper)
+
+      /**
+       * Update kuantitas item di keranjang
+       * @param {number} id - ID Produk
+       * @param {number|null} variation_id - ID Variasi
+       * @param {number} quantity - Kuantitas baru
+       */
+      updateItemQuantity: (id, variation_id, quantity) => {
+        const { items } = get();
+        const newItems = items.map((item) => {
+          if (item.id === id && item.variation_id === variation_id) {
+            return { ...item, quantity: Math.max(1, quantity) }; // Pastikan minimal 1
+          }
+          return item;
+        });
+        set({ items: newItems });
+      },
+
+      /**
+       * Mengosongkan keranjang (setelah checkout)
+       */
       clearCart: () => {
-        // Ini hanya helper frontend, API akan clear cart saat checkout
-        set({ items: [], total: 0 });
+        set({ items: [] });
+      },
+
+      /**
+       * Menghitung total item (bukan total kuantitas)
+       */
+      getTotalItems: () => {
+        const { items } = get();
+        // Menghitung jumlah kuantitas semua item
+        return items.reduce((total, item) => total + item.quantity, 0);
+      },
+
+      /**
+       * Menghitung total harga
+       */
+      getTotalPrice: () => {
+         const { items } = get();
+         return items.reduce((total, item) => total + (item.price * item.quantity), 0);
       }
+      
     }),
     {
-      name: 'sadesa-cart-storage',
-      storage: createJSONStorage(() => localStorage),
+      name: 'cart-storage', // Nama key di localStorage
+      storage: createJSONStorage(() => localStorage), // Gunakan localStorage
     }
   )
 );

@@ -1,310 +1,346 @@
 // File: src/pages/checkout.js
-// Menambahkan ikon untuk "Ambil di Tempat"
+// PERBAIKAN: Implementasi alur checkout penuh
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
+import { apiFetch, apiPost, apiGetShippingOptions, apiCreateOrder, apiGetMyAddresses } from '@/lib/api'; // Impor fungsi API baru
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useCartStore } from '@/store/cartStore';
-import { useAuthStore } from '@/store/authStore';
-import { apiFetch } from '@/lib/api';
-import { IconCheckCircle, IconTruck, IconShoppingBag } from '@/components/icons'; // Tambahkan ikon
+import { IconMapPin, IconChevronRight, IconPlus, IconTruck, IconWallet, IconInfo } from '@/components/icons';
+import { formatCurrency } from '@/lib/utils'; // Asumsi ada helper formatCurrency
 
-// Komponen Alamat (Form + Tampilan)
-function AlamatForm({ alamat, setAlamat }) {
-  // TODO: Ambil data provinsi dari API
-  // const [provinsi, setProvinsi] = useState([]);
-  // const [kabupaten, setKabupaten] = useState([]);
-  // ... dst
-
-  if (alamat) {
-    return (
-      <div className="rounded-lg border border-green-300 bg-green-50 p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-green-800">Alamat Pengiriman</h3>
-          <button onClick={() => setAlamat(null)} className="text-sm font-semibold text-primary hover:underline">
-            Ubah Alamat
-          </button>
-        </div>
-        <p className="mt-2 text-gray-700">{alamat.alamat_lengkap}</p>
-        <p className="text-gray-700">{alamat.kecamatan_nama}, {alamat.kabupaten_nama}</p>
-        <p className="text-gray-700">{alamat.provinsi_nama}</p>
-      </div>
-    );
-  }
-
-  // Form untuk mengisi alamat baru
-  // Ini adalah versi sederhana, idealnya menggunakan dropdown dinamis
-  return (
-    <>
-      <p className="text-red-500 text-sm mb-2">Fitur alamat belum lengkap. Harap gunakan alamat default Anda.</p>
-      {/* <input type="text" placeholder="Alamat Lengkap" className="..."/>
-        ... dropdown provinsi, kab, kec ...
-      */}
-      <button 
-        disabled 
-        className="rounded-lg bg-gray-300 px-5 py-2 text-white cursor-not-allowed"
-      >
-        Simpan Alamat (Demo)
-      </button>
-    </>
-  );
-}
-
-// Komponen Pilihan Ongkir
-function ShippingOptions({ tokoId, namaToko, options, selected, onSelect }) {
-  if (!options || options.length === 0) {
-    return <p className="text-red-500">Tidak ada opsi pengiriman ke alamat Anda.</p>;
-  }
-  
-  return (
-    <div className="rounded-lg border bg-white shadow-sm mb-4">
-      <h3 className="p-4 font-semibold border-b">{namaToko}</h3>
-      <div className="p-4 space-y-3">
-        {options.map(opt => {
-          const isPickup = opt.metode.startsWith('local_pickup');
-          
-          return (
-            <label
-              key={opt.metode}
-              className={`flex items-center gap-4 rounded-lg border p-3 cursor-pointer ${
-                selected === opt.metode ? 'border-primary ring-2 ring-primary' : 'border-gray-300'
-              }`}
-            >
-              <div className="text-primary">
-                {isPickup ? <IconShoppingBag className="h-6 w-6" /> : <IconTruck className="h-6 w-6" />}
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{opt.nama}</p>
-                <p className="text-sm text-gray-500">
-                  {isPickup ? 'Ambil sendiri di lokasi penjual' : `Estimasi pengiriman`}
-                </p>
-              </div>
-              <p className="font-semibold">
-                {opt.harga === 0 ? 'Gratis' : `Rp ${opt.harga.toLocaleString('id-ID')}`}
-              </p>
-              <input
-                type="radio"
-                name={`shipping-${tokoId}`}
-                value={opt.metode}
-                checked={selected === opt.metode}
-                onChange={() => onSelect(tokoId, opt.metode)}
-                className="form-radio h-5 w-5 text-primary"
-              />
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
+// (Asumsi) Helper formatCurrency, pindahkan ke lib/utils.js jika belum ada
+// export function formatCurrency(amount) {
+//   return new Intl.NumberFormat('id-ID', {
+//     style: 'currency',
+//     currency: 'IDR',
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(amount);
+// }
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { items, total, clearCart } = useCartStore();
+  const { user, token } = useAuthStore();
+  const { items, clearCart } = useCartStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [alamat, setAlamat] = useState(null);
-  const [shippingOptions, setShippingOptions] = useState(null);
-  const [shippingChoices, setShippingChoices] = useState({}); // { tokoId: 'metode' }
-  const [orderNotes, setOrderNotes] = useState('');
   const [error, setError] = useState(null);
 
-  // 1. Cek Login & ambil alamat default
+  // Data Checkout
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [sellerGroups, setSellerGroups] = useState({}); // { pedagang_id: { nama_toko: '...', items: [...] } }
+  const [shippingOptions, setShippingOptions] = useState({}); // { pedagang_id: { nama_toko: '...', options: [...] } }
+  const [selectedShipping, setSelectedShipping] = useState({}); // { pedagang_id: { metode: '...', harga: 123 } }
+  const [paymentMethod, setPaymentMethod] = useState('manual_transfer'); // Metode pembayaran default
+
+  // Total
+  const [subtotal, setSubtotal] = useState(0);
+  const [totalShipping, setTotalShipping] = useState(0);
+  const [grandTotal, setGrandTotal] = useState(0);
+
+  // Helper formatCurrency (atau impor dari lib/utils)
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // 1. Cek Login, Keranjang, dan Ambil Alamat
   useEffect(() => {
-    if (!user) {
-      router.replace('/akun?redirect=/checkout');
-    } else {
-      // Ambil profil user untuk alamat default
-      apiFetch('/profile/me')
-        .then(data => {
-          if (data.shipping_address_default) {
-            setAlamat(data.shipping_address_default);
-          }
-          setIsLoading(false);
-        })
-        .catch(() => setIsLoading(false));
+    if (!token) {
+      router.push('/akun'); // Wajib login
+      return;
     }
-  }, [user, router]);
-
-  // 2. Ambil Opsi Pengiriman jika keranjang & alamat berubah
-  useEffect(() => {
-    if (items.length > 0 && alamat) {
-      setIsLoading(true);
-      setError(null);
-      
-      const cart_items_simple = items.map(item => ({ product_id: item.product_id }));
-      const address_api = {
-        provinsi_id: alamat.provinsi_id,
-        kabupaten_id: alamat.kabupaten_id,
-        kecamatan_id: alamat.kecamatan_id,
-        kelurahan_id: alamat.kelurahan_id,
-      };
-
-      apiFetch('/shipping-options', {
-        method: 'POST',
-        body: JSON.stringify({ cart_items: cart_items_simple, address_api }),
-      })
-      .then(data => {
-        setShippingOptions(data.seller_options);
-        // Set pilihan default (opsi pertama)
-        const defaultChoices = {};
-        for (const tokoId in data.seller_options) {
-          if (data.seller_options[tokoId].options.length > 0) {
-            defaultChoices[tokoId] = data.seller_options[tokoId].options[0].metode;
-          }
-        }
-        setShippingChoices(defaultChoices);
-      })
-      .catch(err => setError('Gagal mengambil opsi pengiriman.'))
-      .finally(() => setIsLoading(false));
-    }
-  }, [items, alamat]);
-
-  // Hitung Total Akhir
-  let totalOngkir = 0;
-  if (shippingOptions) {
-    for (const tokoId in shippingChoices) {
-      const metode = shippingChoices[tokoId];
-      const option = shippingOptions[tokoId]?.options.find(o => o.metode === metode);
-      if (option) {
-        totalOngkir += option.harga;
-      }
-    }
-  }
-  const totalAkhir = total + totalOngkir;
-
-  // Handle Buat Pesanan
-  const handlePlaceOrder = async () => {
-    setIsPlacingOrder(true);
-    setError(null);
-    
-    // Validasi
-    if (Object.keys(shippingChoices).length !== Object.keys(shippingOptions).length) {
-      setError('Harap pilih metode pengiriman untuk semua toko.');
-      setIsPlacingOrder(false);
+    if (items.length === 0) {
+      router.push('/keranjang'); // Keranjang kosong
       return;
     }
 
-    try {
-      const data = await apiFetch('/orders/create', {
-        method: 'POST',
-        body: JSON.stringify({
-          shipping_address: alamat.alamat_lengkap,
-          address_api: {
-            provinsi_id: alamat.provinsi_id,
-            kabupaten_id: alamat.kabupaten_id,
-            kecamatan_id: alamat.kecamatan_id,
-            kelurahan_id: alamat.kelurahan_id,
-          },
-          shipping_choices: shippingChoices,
-          order_notes: orderNotes,
-        }),
-      });
+    // Kelompokkan item berdasarkan seller_id (pedagang_id)
+    let currentSubtotal = 0;
+    const groups = items.reduce((acc, item) => {
+      const sellerId = item.seller_id; // Pastikan ini ada di item keranjang!
+      if (!acc[sellerId]) {
+        acc[sellerId] = {
+          nama_toko: item.nama_toko || 'Toko', // Pastikan ini ada
+          items: [],
+        };
+      }
+      acc[sellerId].items.push(item);
+      currentSubtotal += item.price * item.quantity;
+      return acc;
+    }, {});
+    setSellerGroups(groups);
+    setSubtotal(currentSubtotal);
 
-      // Sukses
-      clearCart();
-      // Redirect ke halaman detail pesanan (jika 1 pesanan) atau halaman sukses
-      const firstOrderId = data.order_ids[0];
-      router.replace(`/pesanan/${firstOrderId}?success=true`);
+    // Ambil alamat
+    const fetchAddresses = async () => {
+      try {
+        setIsLoading(true);
+        const data = await apiGetMyAddresses();
+        setAddresses(data.addresses || []);
+        
+        // Set alamat utama (jika ada)
+        const defaultAddress = data.addresses.find(addr => addr.id === data.default_address_id);
+        if (defaultAddress) {
+          setSelectedAddress(defaultAddress);
+        } else if (data.addresses.length > 0) {
+          setSelectedAddress(data.addresses[0]); // Fallback ke alamat pertama
+        }
+      } catch (err) {
+        setError('Gagal mengambil data alamat.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAddresses();
+  }, [token, items, router]);
+
+  // 2. Ambil Opsi Pengiriman saat alamat berubah
+  useEffect(() => {
+    if (!selectedAddress) {
+      setShippingOptions({});
+      return;
+    }
+
+    const fetchShipping = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Buat payload cart_items sederhana
+        const cartPayload = items.map(item => ({ product_id: item.product_id }));
+        // Buat payload address_api
+        const addressApiPayload = {
+          kecamatan_id: selectedAddress.api_kecamatan_id,
+          kelurahan_id: selectedAddress.api_kelurahan_id,
+          kabupaten_id: selectedAddress.api_kabupaten_id,
+        };
+        
+        const data = await apiGetShippingOptions(cartPayload, addressApiPayload);
+        setShippingOptions(data.seller_options || {});
+        // Reset pilihan shipping sebelumnya
+        setSelectedShipping({}); 
+      } catch (err) {
+        setError('Gagal mengambil opsi pengiriman: ' + err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchShipping();
+  }, [selectedAddress, items]);
+
+  // 3. Hitung Ulang Total
+  useEffect(() => {
+    let newTotalShipping = 0;
+    for (const sellerId in selectedShipping) {
+      newTotalShipping += selectedShipping[sellerId].harga || 0;
+    }
+    setTotalShipping(newTotalShipping);
+    setGrandTotal(subtotal + newTotalShipping);
+  }, [selectedShipping, subtotal]);
+
+  // 4. Handler untuk memilih pengiriman
+  const handleShippingSelect = (sellerId, option) => {
+    setSelectedShipping(prev => ({
+      ...prev,
+      [sellerId]: {
+        metode: option.metode,
+        harga: option.harga,
+        nama: option.nama,
+      },
+    }));
+  };
+
+  // 5. Handler untuk Buat Pesanan
+  const handlePlaceOrder = async () => {
+    setError(null);
+    
+    // Validasi
+    if (!selectedAddress) {
+      setError('Silakan pilih alamat pengiriman.'); return;
+    }
+    if (Object.keys(selectedShipping).length !== Object.keys(sellerGroups).length) {
+      setError('Silakan pilih metode pengiriman untuk semua toko.'); return;
+    }
+    if (!paymentMethod) {
+      setError('Silakan pilih metode pembayaran.'); return;
+    }
+
+    setIsPlacingOrder(true);
+    try {
+      const payload = {
+        cart_items: items, // Kirim cart items lengkap
+        shipping_address_id: selectedAddress.id,
+        seller_shipping_choices: selectedShipping,
+        payment_method: paymentMethod,
+      };
+
+      const data = await apiCreateOrder(payload);
+      
+      // Sukses!
+      clearCart(); // Kosongkan keranjang
+      router.push(`/pesanan/${data.order_id}`); // Redirect ke halaman detail pesanan
 
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Gagal membuat pesanan.');
+    } finally {
       setIsPlacingOrder(false);
     }
   };
 
+  // Helper render
+  const renderShippingOptions = (sellerId) => {
+    const optionsData = shippingOptions[sellerId];
+    if (isLoading) return <LoadingSpinner />;
+    if (!optionsData || !optionsData.options) return <p className="text-sm text-red-500">Tidak ada pengiriman.</p>;
+    
+    return (
+      <div className="flex flex-col gap-2">
+        {optionsData.options.map((opt, index) => (
+          <label
+            key={index}
+            className={`flex items-center justify-between rounded-lg border p-3 ${selectedShipping[sellerId]?.metode === opt.metode ? 'border-primary ring-2 ring-primary' : 'border-gray-300'}`}
+          >
+            <div className="flex items-center">
+              <input
+                type="radio"
+                name={`shipping_${sellerId}`}
+                checked={selectedShipping[sellerId]?.metode === opt.metode}
+                onChange={() => handleShippingSelect(sellerId, opt)}
+                className="h-4 w-4 text-primary focus:ring-primary"
+                disabled={opt.metode === 'tidak_tersedia'}
+              />
+              <span className="ml-3 text-sm font-medium">{opt.nama}</span>
+            </div>
+            <span className="text-sm font-semibold">
+              {opt.harga !== null ? formatCurrency(opt.harga) : '-'}
+            </span>
+          </label>
+        ))}
+      </div>
+    );
+  };
 
-  if (!user) return <LoadingSpinner fullPage />;
+
+  if (isLoading && !selectedAddress) {
+    return <Layout><LoadingSpinner /></Layout>;
+  }
 
   return (
     <Layout>
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
-      
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-100 p-4 text-red-700">{error}</div>
-      )}
+      <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-6">
-          {/* 1. Alamat */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Alamat Pengiriman</h2>
-            {isLoading && !alamat ? (
-              <p>Memuat alamat...</p>
-            ) : (
-              <AlamatForm alamat={alamat} setAlamat={setAlamat} />
-            )}
+      {/* 1. Alamat Pengiriman */}
+      <section className="mb-6 rounded-lg bg-white p-4 shadow-md">
+        <h2 className="mb-3 text-lg font-semibold">Alamat Pengiriman</h2>
+        {selectedAddress ? (
+          <div>
+            <p className="font-semibold">{selectedAddress.nama_penerima} ({selectedAddress.no_hp})</p>
+            <p className="text-sm text-gray-600">{selectedAddress.alamat_lengkap}</p>
+            <p className="text-sm text-gray-600">{selectedAddress.kelurahan}, {selectedAddress.kecamatan}, {selectedAddress.kabupaten}, {selectedAddress.provinsi}</p>
           </div>
-          
-          {/* 2. Opsi Pengiriman */}
-          {alamat && (
-            <div className="rounded-lg bg-white p-4 shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Opsi Pengiriman</h2>
-              {isLoading && !shippingOptions ? (
-                <LoadingSpinner />
+        ) : (
+          <p className="text-sm text-gray-500">Anda belum memiliki alamat.</p>
+        )}
+        <button
+          onClick={() => alert('Fitur ganti/tambah alamat belum diimplementasikan')}
+          className="mt-3 flex items-center gap-1 text-sm font-semibold text-primary"
+        >
+          {addresses.length > 0 ? 'Ganti Alamat' : 'Tambah Alamat'}
+          <IconChevronRight className="h-4 w-4" />
+        </button>
+      </section>
+
+      {/* 2. Daftar Pesanan & Opsi Pengiriman per Toko */}
+      <section className="mb-6 flex flex-col gap-4">
+        {Object.keys(sellerGroups).map(sellerId => (
+          <div key={sellerId} className="rounded-lg bg-white p-4 shadow-md">
+            <h3 className="mb-3 font-semibold text-primary">{sellerGroups[sellerId].nama_toko}</h3>
+            {/* Item list */}
+            {sellerGroups[sellerId].items.map(item => (
+              <div key={item.id} className="mb-2 flex gap-3 border-b pb-2">
+                <img src={item.image} alt={item.name} className="h-16 w-16 rounded-md object-cover" />
+                <div>
+                  <p className="text-sm font-semibold">{item.name}</p>
+                  <p className="text-xs text-gray-500">{item.variation_name}</p>
+                  <p className="text-sm">{item.quantity} x {formatCurrency(item.price)}</p>
+                </div>
+              </div>
+            ))}
+            {/* Opsi Pengiriman */}
+            <div className="mt-4">
+              <h4 className="mb-2 flex items-center gap-1 text-sm font-semibold">
+                <IconTruck className="h-5 w-5" />
+                Pilih Pengiriman
+              </h4>
+              {!selectedAddress ? (
+                <p className="text-xs text-gray-500">Pilih alamat terlebih dahulu.</p>
               ) : (
-                shippingOptions && Object.entries(shippingOptions).map(([tokoId, data]) => (
-                  <ShippingOptions
-                    key={tokoId}
-                    tokoId={tokoId}
-                    namaToko={data.nama_toko}
-                    options={data.options}
-                    selected={shippingChoices[tokoId]}
-                    onSelect={(tokoId, metode) => {
-                      setShippingChoices(prev => ({ ...prev, [tokoId]: metode }));
-                    }}
-                  />
-                ))
+                renderShippingOptions(sellerId)
               )}
             </div>
-          )}
-
-          {/* 3. Catatan */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
-            <label htmlFor="order_notes" className="text-xl font-semibold">Catatan Pesanan (Opsional)</label>
-            <textarea
-              id="order_notes"
-              rows="3"
-              value={orderNotes}
-              onChange={(e) => setOrderNotes(e.target.value)}
-              className="mt-4 w-full rounded-lg border border-gray-300 p-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Tinggalkan catatan untuk penjual..."
-            ></textarea>
           </div>
-        </div>
+        ))}
+      </section>
 
-        {/* 4. Ringkasan Total */}
-        <div className="md:col-span-1">
-          <div className="sticky top-20 rounded-lg bg-white p-6 shadow-md">
-            <h2 className="text-xl font-semibold border-b pb-4">Total Pesanan</h2>
-            <div className="space-y-3 mt-4">
-              <div className="flex justify-between">
-                <span>Total Produk</span>
-                <span className="font-semibold">Rp {total.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Total Ongkir</span>
-                <span className="font-semibold">Rp {totalOngkir.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-4 mt-4">
-                <span>Total Akhir</span>
-                <span className="text-primary">Rp {totalAkhir.toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-            <button
-              onClick={handlePlaceOrder}
-              disabled={isLoading || isPlacingOrder || !alamat || !shippingOptions}
-              className="mt-6 w-full rounded-lg bg-primary py-3 text-center text-lg font-semibold text-white shadow-lg transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-400"
-            >
-              {isPlacingOrder ? 'Memproses...' : 'Buat Pesanan'}
-            </button>
-          </div>
+      {/* 3. Metode Pembayaran */}
+      <section className="mb-6 rounded-lg bg-white p-4 shadow-md">
+         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+          <IconWallet className="h-6 w-6" />
+          Metode Pembayaran
+        </h2>
+        <div>
+          <label className="flex items-center rounded-lg border border-primary p-3 ring-2 ring-primary">
+            <input
+              type="radio"
+              name="payment"
+              value="manual_transfer"
+              checked={paymentMethod === 'manual_transfer'}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="h-4 w-4 text-primary focus:ring-primary"
+            />
+            <span className="ml-3 text-sm font-medium">Transfer Bank (Manual)</span>
+          </label>
         </div>
-      </div>
+      </section>
+
+      {/* 4. Ringkasan & Tombol Bayar */}
+      <section className="sticky bottom-[68px] rounded-t-lg border-t bg-white p-4 shadow-lg md:bottom-0 md:rounded-lg">
+        <h2 className="mb-3 text-lg font-semibold">Ringkasan Belanja</h2>
+        <div className="flex justify-between text-sm">
+          <p className="text-gray-600">Subtotal ({items.length} item)</p>
+          <p className="font-semibold">{formatCurrency(subtotal)}</p>
+        </div>
+        <div className="flex justify-between text-sm">
+          <p className="text-gray-600">Total Ongkos Kirim</p>
+          <p className="font-semibold">{formatCurrency(totalShipping)}</p>
+        </div>
+        <hr className="my-3" />
+        <div className="flex justify-between text-lg font-bold">
+          <p>Total Tagihan</p>
+          <p className="text-primary">{formatCurrency(grandTotal)}</p>
+        </div>
+        
+        {error && (
+          <p className="mt-3 text-center text-sm text-red-600">{error}</p>
+        )}
+
+        <button
+          onClick={handlePlaceOrder}
+          disabled={isPlacingOrder || isLoading}
+          className="mt-4 w-full rounded-lg bg-primary py-3 px-4 font-semibold text-white shadow transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-400"
+        >
+          {isPlacingOrder ? <LoadingSpinner className="h-5 w-5" /> : 'Buat Pesanan'}
+        </button>
+      </section>
     </Layout>
   );
 }
-
