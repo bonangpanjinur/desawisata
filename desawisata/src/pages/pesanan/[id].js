@@ -7,7 +7,19 @@ import { apiGetOrderDetail, apiUploadFile, apiConfirmPayment } from '@/lib/api';
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { IconAlertCircle, IconCheckCircle, IconClock, IconFileUpload, IconInfo } from '@/components/icons';
-import { formatCurrency } from '@/lib/utils'; // PERBAIKAN: Impor dari utils
+
+// (Asumsi) Helper formatCurrency, pindahkan ke lib/utils.js jika belum ada
+export function formatCurrency(amount) {
+  if (typeof amount !== 'number') {
+    amount = parseFloat(amount) || 0;
+  }
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 export default function OrderDetailPage() {
   const router = useRouter();

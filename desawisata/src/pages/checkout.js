@@ -8,7 +8,17 @@ import { apiFetch, apiPost, apiGetShippingOptions, apiCreateOrder, apiGetMyAddre
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { IconMapPin, IconChevronRight, IconPlus, IconTruck, IconWallet, IconInfo } from '@/components/icons';
-import { formatCurrency } from '@/lib/utils'; // Impor helper formatCurrency dari file utils
+import { formatCurrency } from '@/lib/utils'; // Asumsi ada helper formatCurrency
+
+// (Asumsi) Helper formatCurrency, pindahkan ke lib/utils.js jika belum ada
+// export function formatCurrency(amount) {
+//   return new Intl.NumberFormat('id-ID', {
+//     style: 'currency',
+//     currency: 'IDR',
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(amount);
+// }
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -31,6 +41,16 @@ export default function CheckoutPage() {
   const [subtotal, setSubtotal] = useState(0);
   const [totalShipping, setTotalShipping] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
+
+  // Helper formatCurrency (atau impor dari lib/utils)
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   // 1. Cek Login, Keranjang, dan Ambil Alamat
   useEffect(() => {
