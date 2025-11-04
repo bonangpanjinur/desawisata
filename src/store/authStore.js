@@ -1,69 +1,70 @@
-// File: src/store/authStore.js
-// PERBAIKAN: Menambahkan fungsi register, memperbaiki login, dan implementasi persist
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { apiLogin, apiRegister } from '@/lib/api'; // Impor fungsi API baru
+// src/store/authStore.js
+// PERBAIKAN: Menggunakan 'persist' untuk menyimpan state otomatis
+// dan menghapus 'localStorage' manual serta fungsi hydrate.
 
-export const useAuthStore = create(
+import create from 'zustand';
+import { persist } from 'zustand/middleware'; // 1. Impor persist
+import { apiLogin, apiFetch } from '@/lib/api';
+
+// 2. Bungkus 'create' dengan 'persist'
+const useAuthStore = create(
   persist(
     (set) => ({
       user: null,
       token: null,
-      
-      /**
-       * Menetapkan pengguna dan token ke state
-       */
-      setUser: (userData, authToken) => {
-        set({ user: userData, token: authToken });
-      },
+      loading: false,
 
-      /**
-       * Fungsi Login
-       * PERBAIKAN: Menggunakan apiLogin yang baru
-       */
+      // Fungsi hydrate tidak lagi diperlukan, 'persist' menanganinya
+      // hydrate: () => { ... } // DIHAPUS
+
       login: async (username, password) => {
+        set({ loading: true, error: null });
         try {
-          // Panggil apiLogin dari lib/api.js
           const data = await apiLogin(username, password);
           if (data.token && data.user_data) {
-            set({ user: data.user_data, token: data.token });
-            return data;
+            set({ user: data.user_data, token: data.token, loading: false });
+            // 3. Hapus 'localStorage.setItem' manual
+            // localStorage.setItem('token', data.token); // DIHAPUS
+            // localStorage.setItem('user', JSON.stringify(data.user_data)); // DIHAPUS
+            return true;
           }
-          throw new Error(data.message || 'Data login tidak valid');
+          throw new Error('Data login tidak valid');
         } catch (error) {
-          console.error("Login Gagal di Store:", error);
-          throw error; // Lempar error agar bisa ditangkap UI
+          console.error("Login failed:", error);
+          set({ loading: false, error: error.message });
+          return false;
         }
       },
 
-      /**
-       * Fungsi Register (BARU)
-       */
-      register: async (username, email, password, namaLengkap) => {
-        try {
-          // Panggil apiRegister dari lib/api.js
-          const data = await apiRegister(username, email, password, namaLengkap);
-          // Anda bisa memilih untuk login otomatis setelah register, 
-          // atau hanya menampilkan pesan sukses
-          return data; // Mengembalikan { message: '...' }
-        } catch (error) {
-          console.error("Register Gagal di Store:", error);
-          throw error; // Lempar error agar bisa ditangkap UI
-        }
-      },
-
-      /**
-       * Fungsi Logout
-       */
       logout: () => {
         set({ user: null, token: null });
-        // Hapus juga data keranjang saat logout
-        // (Jika Anda menggunakan persist di cartStore, panggil cartStore.clearCart())
+        // 4. Hapus 'localStorage.removeItem' manual
+        // localStorage.removeItem('token'); // DIHAPUS
+        // localStorage.removeItem('user'); // DIHAPUS
+        
+        // Opsional: Hapus juga state keranjang saat logout
+        // Jika Anda ingin keranjang juga kosong saat logout, tambahkan ini:
+        // useCartStore.getState().clearCart();
       },
+
+      // Fungsi untuk validasi token di server (opsional tapi bagus)
+      validateToken: async () => {
+        try {
+          const data = await apiFetch('/auth/validate-token');
+          // Jika token valid, server akan mengembalikan data user terbaru
+          set({ user: data.user_data, loading: false });
+        } catch (error) {
+          // Jika token tidak valid (misal: expired), logout
+          console.log("Token validation failed, logging out.");
+          set({ user: null, token: null, loading: false });
+        }
+      }
     }),
     {
       name: 'auth-storage', // Nama key di localStorage
-      storage: createJSONStorage(() => localStorage), // Gunakan localStorage
+      // partialize: (state) => ({ token: state.token, user: state.user }), // Opsional: hanya simpan token dan user
     }
   )
 );
+
+export default useAuthStore;

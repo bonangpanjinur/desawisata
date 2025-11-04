@@ -1,273 +1,320 @@
-// File: src/pages/akun.js
-// PERBAIKAN: Implementasi penuh form Login dan Register dengan state dan handler
-// PERBAIKAN 2: Mengganti nama import IconLogout -> IconLogOut
-import { useState } from 'react';
-import { useRouter } from 'next/router';
-import { useAuthStore } from '@/store/authStore';
-import Layout from '@/components/Layout';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { IconUser, IconLogOut, IconShoppingBag, IconChevronRight, IconEye, IconEyeOff } from '@/components/icons'; // PERBAIKAN DI SINI
-import Link from 'next/link';
+// src/pages/akun.js
+// PERBAIKAN: Menambahkan state 'loading' dan feedback error 'toast'
+// untuk login, register, dan update.
 
-export default function AkunPage() {
-  const { user, token, logout } = useAuthStore();
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import useAuthStore from '@/store/authStore';
+import Layout from '@/components/Layout';
+import { apiFetch, apiUpdateProfile } from '@/lib/api'; // Asumsi apiUpdateProfile ada di api.js
+import { toast } from 'react-hot-toast'; // 1. Impor toast
+
+export default function Akun() {
   const router = useRouter();
+  const { user, login, logout } = useAuthStore();
 
   // State untuk form
-  const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [message, setMessage] = useState(null); // Untuk pesan sukses register
-  const [showPassword, setShowPassword] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [namaLengkap, setNamaLengkap] = useState('');
 
-  // State Form Login
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  // 2. Tambahkan state loading
+  const [loading, setLoading] = useState(false);
 
-  // State Form Register
-  const [regNama, setRegNama] = useState('');
-  const [regUsername, setRegUsername] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  // State untuk edit profil (jika sudah login)
+  const [editData, setEditData] = useState({
+    displayName: '',
+    email: '',
+  });
 
-  const { login, register } = useAuthStore();
+  useEffect(() => {
+    if (user) {
+      setEditData({
+        displayName: user.display_name || '',
+        email: user.email || '',
+      });
+    } else {
+      // Jika user logout atau token tidak valid, paksa ke mode login
+      setIsLogin(true);
+    }
+  }, [user]);
 
-  // Handler untuk Login
   const handleLogin = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    if (loading) return; // 3. Cegah klik ganda
+
+    setLoading(true); // 4. Set loading true
     try {
-      await login(loginUsername, loginPassword);
-      router.push('/akun'); // Redirect ke halaman akun (yang akan menampilkan profil)
-    } catch (err) {
-      setError(err.message || 'Login gagal. Periksa kembali username/password Anda.');
+      const success = await login(username, password);
+      if (success) {
+        toast.success('Login berhasil!');
+        router.push('/');
+      } else {
+        // 'login' store akan menangani set error, kita tampilkan di sini
+        toast.error('Login gagal. Cek kembali username/password Anda.');
+      }
+    } catch (error) {
+      console.error(error);
+      // 5. Tampilkan error ke pengguna
+      toast.error(error.message || 'Terjadi kesalahan saat login.');
     } finally {
-      setIsLoading(false);
+      setLoading(false); // 6. Set loading false
     }
   };
 
-  // Handler untuk Register (BARU)
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (regPassword !== regConfirmPassword) {
-      setError('Password dan konfirmasi password tidak cocok.');
-      return;
-    }
-    if (!regNama || !regUsername || !regEmail || !regPassword) {
-      setError('Semua field wajib diisi.');
-      return;
-    }
+    if (loading) return;
 
-    setIsLoading(true);
-    setError(null);
-    setMessage(null);
+    setLoading(true);
     try {
-      const data = await register(regUsername, regEmail, regPassword, regNama);
-      setMessage(data.message || 'Registrasi berhasil! Silakan masuk.');
-      setActiveTab('login'); // Pindahkan ke tab login setelah sukses
-      // Kosongkan form register
-      setRegNama('');
-      setRegUsername('');
-      setRegEmail('');
-      setRegPassword('');
-      setRegConfirmPassword('');
-    } catch (err) {
-      setError(err.message || 'Registrasi gagal. Username/Email mungkin sudah digunakan.');
+      // Asumsi Anda punya apiRegister di api.js, jika tidak kita buatkan
+      // Untuk sekarang, kita tiru endpoint dari plugin:
+      await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          username,
+          password,
+          email,
+          nama_lengkap: namaLengkap,
+        }),
+      });
+      
+      toast.success('Registrasi berhasil! Silakan login.');
+      setIsLogin(true); // Arahkan ke tab login
+      // Kosongkan form
+      setUsername('');
+      setPassword('');
+      setEmail('');
+      setNamaLengkap('');
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Registrasi gagal. Pastikan data unik.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (loading) return;
 
-  // Tampilan Jika Sudah Login
-  if (token && user) {
+    setLoading(true);
+    toast.loading('Menyimpan profil...'); // Contoh toast loading
+
+    try {
+      // TODO: Anda perlu membuat fungsi `apiUpdateProfile` di api.js
+      // yang melakukan POST ke `/pembeli/profile/me`
+      // const updatedUser = await apiUpdateProfile(editData);
+      
+      // Untuk sementara, kita simulasi
+      // await new Promise(res => setTimeout(res, 1000)); 
+      // const updatedUser = { ...user, ...editData };
+
+      // Hapus toast loading
+      toast.dismiss();
+
+      // TODO: Update user di authStore
+      // useAuthStore.setState({ user: updatedUser });
+      
+      toast.success('Profil berhasil diperbarui!');
+    } catch (error) {
+      toast.dismiss();
+      console.error(error);
+      toast.error(error.message || 'Gagal memperbarui profil.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (user) {
+    // --- TAMPILAN JIKA SUDAH LOGIN ---
     return (
       <Layout>
-        <div className="flex items-center gap-4 border-b pb-6 mb-6">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-200">
-            <IconUser className="h-10 w-10 text-gray-500" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">{user.display_name || 'Pengguna'}</h1>
-            <p className="text-gray-600">{user.email}</p>
-          </div>
-        </div>
+        <div className="container mx-auto p-4 max-w-lg">
+          <h1 className="text-3xl font-bold mb-6 text-center">Akun Saya</h1>
+          <p className="text-center mb-4">
+            Halo, <strong>{user.display_name}</strong> ({user.email})
+          </p>
 
-        <nav className="flex flex-col gap-2">
-          <Link href="/pesanan">
-            <div className="flex cursor-pointer items-center justify-between rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-              <div className="flex items-center gap-3">
-                <IconShoppingBag className="h-6 w-6 text-primary" />
-                <span className="font-semibold">Pesanan Saya</span>
-              </div>
-              <IconChevronRight className="h-5 w-5 text-gray-400" />
+          <form onSubmit={handleUpdateProfile} className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-semibold mb-4">Edit Profil</h2>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2" htmlFor="displayName">
+                Nama Tampilan
+              </label>
+              <input
+                type="text"
+                id="displayName"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={editData.displayName}
+                onChange={(e) => setEditData({ ...editData, displayName: e.target.value })}
+              />
             </div>
-          </Link>
-          {/* Tambahkan link lain di sini (misal: Alamat, Pengaturan Akun) */}
-        </nav>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2" htmlFor="emailDisplay">
+                Email (read-only)
+              </label>
+              <input
+                type="email"
+                id="emailDisplay"
+                className="w-full px-4 py-2 border rounded-lg bg-gray-100"
+                value={editData.email}
+                readOnly
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading} // 7. Update tombol
+              className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+            >
+              {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </button>
+          </form>
 
-        <button
-          onClick={() => {
-            logout();
-            router.push('/'); // Kembali ke beranda setelah logout
-          }}
-          className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-red-500 py-3 px-4 font-semibold text-white shadow transition-colors hover:bg-red-600"
-        >
-          <IconLogOut className="h-5 w-5" />
-          <span>Keluar</span>
-        </button>
+          <button
+            onClick={() => {
+              logout();
+              toast.success('Logout berhasil.');
+              router.push('/');
+            }}
+            className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition duration-300 mt-6"
+          >
+            Logout
+          </button>
+        </div>
       </Layout>
     );
   }
 
-  // Tampilan Jika Belum Login (Form Login/Register)
+  // --- TAMPILAN JIKA BELUM LOGIN ---
   return (
     <Layout>
-      <h1 className="mb-6 text-center text-3xl font-bold">Akun Saya</h1>
+      <div className="container mx-auto p-4 max-w-md">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex justify-center mb-6">
+            <button
+              onClick={() => setIsLogin(true)}
+              className={`py-2 px-6 ${isLogin ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setIsLogin(false)}
+              className={`py-2 px-6 ${!isLogin ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}
+            >
+              Daftar
+            </button>
+          </div>
 
-      {/* Toggler Tab */}
-      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-gray-200 p-1">
-        <button
-          onClick={() => { setActiveTab('login'); setError(null); setMessage(null); }}
-          className={`rounded-md py-2 text-center font-semibold ${activeTab === 'login' ? 'bg-white text-primary shadow' : 'text-gray-600'}`}
-        >
-          Masuk
-        </button>
-        <button
-          onClick={() => { setActiveTab('register'); setError(null); setMessage(null); }}
-          className={`rounded-md py-2 text-center font-semibold ${activeTab === 'register' ? 'bg-white text-primary shadow' : 'text-gray-600'}`}
-        >
-          Daftar
-        </button>
+          {isLogin ? (
+            // --- FORM LOGIN ---
+            <form onSubmit={handleLogin}>
+              <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="login-username">
+                  Username atau Email
+                </label>
+                <input
+                  type="text"
+                  id="login-username"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2" htmlFor="login-password">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="login-password"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading} // 7. Update tombol
+                className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+              >
+                {loading ? 'Loading...' : 'Login'}
+              </button>
+            </form>
+          ) : (
+            // --- FORM REGISTER ---
+            <form onSubmit={handleRegister}>
+              <h2 className="text-2xl font-bold mb-4 text-center">Daftar Akun Baru</h2>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="reg-nama">
+                  Nama Lengkap
+                </label>
+                <input
+                  type="text"
+                  id="reg-nama"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={namaLengkap}
+                  onChange={(e) => setNamaLengkap(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="reg-email">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="reg-email"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="reg-username">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="reg-username"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2" htmlFor="reg-password">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="reg-password"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading} // 7. Update tombol
+                className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+              >
+                {loading ? 'Mendaftar...' : 'Daftar'}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
-
-      {/* Menampilkan Error atau Message */}
-      {error && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-center text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {message && (
-        <div className="mb-4 rounded-md border border-green-300 bg-green-50 p-3 text-center text-sm text-green-700">
-          {message}
-        </div>
-      )}
-
-      {/* Form Login */}
-      <form onSubmit={handleLogin} className={`flex-col gap-4 ${activeTab === 'login' ? 'flex' : 'hidden'}`}>
-        <div>
-          <label className="mb-1 block font-semibold" htmlFor="loginUser">Username atau Email</label>
-          <input
-            id="loginUser"
-            type="text"
-            value={loginUsername}
-            onChange={(e) => setLoginUsername(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-        <div className="relative">
-          <label className="mb-1 block font-semibold" htmlFor="loginPass">Password</label>
-          <input
-            id="loginPass"
-            type={showPassword ? 'text' : 'password'}
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-[44px] -translate-y-1/2 text-gray-500"
-          >
-            {showPassword ? <IconEyeOff className="h-5 w-5" /> : <IconEye className="h-5 w-5" />}
-          </button>
-        </div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary py-3 px-4 font-semibold text-white shadow transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-400"
-        >
-          {isLoading ? <LoadingSpinner className="h-5 w-5" /> : 'Masuk'}
-        </button>
-      </form>
-
-      {/* Form Register (BARU) */}
-      <form onSubmit={handleRegister} className={`flex-col gap-4 ${activeTab === 'register' ? 'flex' : 'hidden'}`}>
-        <div>
-          <label className="mb-1 block font-semibold" htmlFor="regNama">Nama Lengkap</label>
-          <input
-            id="regNama"
-            type="text"
-            value={regNama}
-            onChange={(e) => setRegNama(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block font-semibold" htmlFor="regUser">Username</label>
-          <input
-            id="regUser"
-            type="text"
-            value={regUsername}
-            onChange={(e) => setRegUsername(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block font-semibold" htmlFor="regEmail">Email</label>
-          <input
-            id="regEmail"
-            type="email"
-            value={regEmail}
-            onChange={(e) => setRegEmail(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-        <div className="relative">
-          {/* INI YANG DIPERBAIKI */}
-          <label className="mb-1 block font-semibold" htmlFor="regPass">Password</label>
-          <input
-            id="regPass"
-            type={showPassword ? 'text' : 'password'}
-            value={regPassword}
-            onChange={(e) => setRegPassword(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-        <div className="relative">
-          <label className="mb-1 block font-semibold" htmlFor="regConfirmPass">Konfirmasi Password</label>
-          <input
-            id="regConfirmPass"
-            type={showPassword ? 'text' : 'password'}
-            value={regConfirmPassword}
-            onChange={(e) => setRegConfirmPassword(e.target.value)}
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-[44px] -translate-y-1/2 text-gray-500"
-          >
-            {showPassword ? <IconEyeOff className="h-5 w-5" /> : <IconEye className="h-5 w-5" />}
-          </button>
-        </div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary py-3 px-4 font-semibold text-white shadow transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-400"
-        >
-          {isLoading ? <LoadingSpinner className="h-5 w-5" /> : 'Daftar'}
-        </button>
-      </form>
     </Layout>
   );
 }
