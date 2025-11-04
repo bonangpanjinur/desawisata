@@ -1,23 +1,20 @@
 // src/pages/keranjang.js
 // PERBAIKAN: 
-// 1. Mengganti destructuring `items` dan `total` dengan `cart` dan `getTotalPrice`.
-// 2. Mengganti `addItem` dengan `updateQuantity` untuk tombol +/-.
-// 3. Menggunakan `item.id` (composite key) untuk `removeItem` dan `updateQuantity`.
-// 4. Menghapus `isLoading` karena tidak ada di store.
-// 5. Menambahkan null check `(items || []).reduce` untuk keamanan SSR.
+// 1. Destructuring 'items' (nama state yang benar) dari store, bukan 'cart'.
+// 2. Memastikan (items || []).length digunakan untuk pengecekan.
 
 import Layout from '@/components/Layout';
 import { useCartStore } from '@/store/cartStore';
 import { IconX, IconPlus, IconMinus, IconCart } from '@/components/icons';
 import Image from 'next/image';
 import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils'; // Import formatCurrency
+import { formatCurrency } from '@/lib/utils'; 
 
 const placeholderImg = "https://placehold.co/100x100/f4f4f5/a1a1aa?text=Sadesa";
 
 export default function KeranjangPage() {
-  // PERBAIKAN: Destructuring state dan fungsi yang benar dari store
-  const { cart: items, getTotalPrice, removeItem, updateQuantity } = useCartStore();
+  // PERBAIKAN: Destructuring 'items' (nama state yang benar di cartStore.js)
+  const { items, getTotalPrice, removeItem, updateQuantity } = useCartStore();
   
   // Panggil selector untuk mendapatkan total
   const total = getTotalPrice(); 
@@ -40,8 +37,8 @@ export default function KeranjangPage() {
     <Layout>
       <h1 className="text-3xl font-bold mb-6">Keranjang Belanja</h1>
       
-      {/* PERBAIKAN: Hapus referensi ke isLoading */}
-      {items.length === 0 ? (
+      {/* PERBAIKAN: Gunakan (items || []).length */}
+      {(items || []).length === 0 ? (
         <div className="text-center py-10">
           <IconCart className="mx-auto h-24 w-24 text-gray-300" />
           <p className="mt-4 text-lg text-gray-500">Keranjang Anda kosong.</p>
@@ -58,7 +55,7 @@ export default function KeranjangPage() {
                 <h2 className="border-b p-4 text-lg font-semibold">{tokoData.nama_toko}</h2>
                 <div className="divide-y">
                   {tokoData.items.map(item => (
-                    // PERBAIKAN: Gunakan item.id (composite key) sebagai key
+                    // Gunakan item.id (composite key) sebagai key
                     <div key={item.id} className="flex gap-4 p-4">
                       <Image
                         src={item.image || placeholderImg}
@@ -78,12 +75,12 @@ export default function KeranjangPage() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end justify-between">
-                        {/* PERBAIKAN: Gunakan item.id untuk removeItem */}
+                        {/* Gunakan item.id untuk removeItem */}
                         <button onClick={() => removeItem(item.id)} className="text-gray-400 hover:text-red-500">
                           <IconX className="h-5 w-5" />
                         </button>
                         <div className="flex items-center rounded-lg border">
-                          {/* PERBAIKAN: Gunakan updateQuantity */}
+                          {/* Gunakan updateQuantity */}
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             className="p-2 disabled:text-gray-300"
@@ -92,7 +89,7 @@ export default function KeranjangPage() {
                             <IconMinus className="h-4 w-4" />
                           </button>
                           <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                          {/* PERBAIKAN: Gunakan updateQuantity */}
+                          {/* Gunakan updateQuantity */}
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="p-2 disabled:text-gray-300"
@@ -114,7 +111,7 @@ export default function KeranjangPage() {
               <h2 className="text-xl font-semibold border-b pb-4">Ringkasan Belanja</h2>
               <div className="flex justify-between mt-4 text-lg">
                 <span>Total Harga Produk</span>
-                {/* PERBAIKAN: Gunakan 'total' (dari getTotalPrice) */}
+                {/* Gunakan 'total' (dari getTotalPrice) */}
                 <span className="font-bold">{formatCurrency(total)}</span>
               </div>
               <p className="text-sm text-gray-500 mt-2">Ongkos kirim akan dihitung saat checkout.</p>
@@ -128,3 +125,4 @@ export default function KeranjangPage() {
     </Layout>
   );
 }
+

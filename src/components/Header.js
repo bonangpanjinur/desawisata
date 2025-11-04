@@ -1,43 +1,74 @@
 // src/components/Header.js
-// UI/UX: Menerima props 'title'
-// PERBAIKAN: Menyembunyikan ikon keranjang dan akun di tampilan mobile (md:hidden)
+// PERBAIKAN: Menerapkan logic yang sama dengan BottomNavBar
+// untuk mencegah error SSR.
+// Gunakan useState dan useEffect.
+
+// PERBAIKAN: Import useState dan useEffect
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'next/router';
+import { IconSearch, IconCart, IconChevronLeft } from './icons';
 import { useCartStore } from '@/store/cartStore';
-import { IconCart, IconUser, IconSearch } from '@/components/icons'; // Tambah IconSearch
 
-export default function Header({ title }) {
-  const { user } = useAuthStore();
-  const { items } = useCartStore();
-  const cartItemCount = items.reduce((acc, item) => acc + item.quantity, 0);
+export default function Header() {
+  const router = useRouter();
+  
+  // PERBAIKAN: Ambil state 'items' dari store
+  const items = useCartStore(state => state.items);
+  
+  // PERBAIKAN: Buat state untuk cartItemCount, default 0
+  const [cartItemCount, setCartItemCount] = useState(0);
 
+  // PERBAIKAN: Gunakan useEffect untuk menghitung di client-side
+  useEffect(() => {
+    const count = (items || []).reduce((acc, item) => acc + item.quantity, 0);
+    setCartItemCount(count);
+  }, [items]); // Jalankan setiap 'items' berubah
+
+  // Logika untuk menampilkan header yang berbeda
+  const isHomePage = router.pathname === '/';
+  
+  // Tampilkan header simpel jika bukan di beranda
+  if (!isHomePage) {
+    return (
+      <header className="sticky top-0 z-40 w-full border-b bg-background shadow-sm md:hidden">
+        <div className="mx-auto flex h-16 max-w-md items-center justify-between px-4">
+          <button onClick={() => router.back()} className="p-2">
+            <IconChevronLeft className="h-6 w-6" />
+          </button>
+          {/* Anda bisa tambahkan judul halaman di sini jika mau */}
+          <span className="text-lg font-semibold">
+            {/* Logika judul bisa ditambahkan di sini */}
+          </span>
+          {/* Placeholder agar tombol kembali di kiri */}
+          <div className="w-8"></div> 
+        </div>
+      </header>
+    );
+  }
+
+  // Header lengkap untuk Beranda
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-      <div className="container mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          {/* Ganti dengan logo dari API Settings jika ada */}
-          {/* Tampilkan title dari props */}
-          <span className="text-lg font-bold text-primary">{title || 'Sadesa.site'}</span>
-        </Link>
-        <nav className="flex items-center gap-4">
-          {/* Tampilkan ikon search di header (desktop) */}
-          <Link href="/jelajah" className="relative hidden md:block" aria-label="Jelajah">
-            <IconSearch className="h-6 w-6 text-gray-600 hover:text-primary" />
+    <header className="sticky top-0 z-40 w-full bg-background shadow-sm md:hidden">
+      <div className="mx-auto flex h-16 max-w-md items-center justify-between gap-4 px-4">
+        {/* Search Bar */}
+        <div className="flex-1">
+          <Link href="/jelajah" className="flex h-10 w-full items-center rounded-lg bg-gray-100 px-4">
+              <IconSearch className="h-5 w-5 text-gray-500" />
+              <span className="ml-2 text-gray-500">Cari di Sadesa...</span>
           </Link>
-          {/* PERBAIKAN: Tambahkan md:block untuk menyembunyikan di mobile */}
-          <Link href="/keranjang" className="relative hidden md:block" aria-label="Keranjang">
-            <IconCart className="h-6 w-6 text-gray-600 hover:text-primary" />
+        </div>
+
+        {/* Ikon Keranjang */}
+        <Link href="/keranjang" className="relative p-2">
+            <IconCart className="h-6 w-6" />
+            {/* PERBAIKAN: Gunakan state cartItemCount */}
             {cartItemCount > 0 && (
-              <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
                 {cartItemCount > 9 ? '9+' : cartItemCount}
               </span>
             )}
-          </Link>
-          {/* PERBAIKAN: Tambahkan md:block untuk menyembunyikan di mobile */}
-          <Link href="/akun" className="relative hidden md:block" aria-label="Akun">
-            <IconUser className={`h-6 w-6 ${user ? 'text-primary' : 'text-gray-600 hover:text-primary'}`} />
-          </Link>
-        </nav>
+        </Link>
       </div>
     </header>
   );
