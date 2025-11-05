@@ -1,7 +1,8 @@
 /**
  * LOKASI FILE: src/pages/pesanan/[id].js
- * PERBAIKAN: Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail'
- * agar sesuai dengan file 'api.js'.
+ * PERUBAHAN:
+ * 1. Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail'.
+ * 2. Mengubah `toast.error("...")` menjadi `toast.error(error.message)`.
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -35,7 +36,8 @@ export default function PesananDetail() {
           setOrder(data);
         } catch (error) {
           console.error('Gagal mengambil detail pesanan:', error);
-          toast.error('Gagal mengambil detail pesanan.');
+          // PERUBAHAN: Tampilkan pesan error spesifik
+          toast.error(error.message);
           router.push('/akun?tab=pesanan');
         } finally {
           setLoading(false);
@@ -87,7 +89,8 @@ export default function PesananDetail() {
     } catch (error) {
       console.error('Gagal konfirmasi pembayaran:', error);
       toast.dismiss();
-      toast.error(`Gagal: ${error.message}`);
+      // PERUBAHAN: Tampilkan pesan error spesifik
+      toast.error(error.message);
     } finally {
       setUploading(false);
       setConfirming(false);

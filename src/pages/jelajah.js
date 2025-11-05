@@ -1,5 +1,7 @@
 // File: src/pages/jelajah.js
-// PERBAIKAN: Menambahkan tab "Desa" dan logikanya
+// PERUBAHAN: 
+// 1. Menambahkan 'toast' agar error pencarian/filter tampil ke user.
+// 2. Menambahkan 'Link' dan 'DesaCard' yang hilang.
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -9,6 +11,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { apiFetch } from '@/lib/api';
 import { IconSearch, IconX, IconFilter, IconChevronDown, IconMapPin } from '@/components/icons';
 import Link from 'next/link'; // Impor Link
+import { toast } from 'react-hot-toast'; // Impor toast
 
 // Helper debounce
 function useDebounce(value, delay) {
@@ -117,6 +120,8 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
         setResults(data.data || []);
       } catch (error) {
         console.error(`Gagal fetch ${tipe}:`, error);
+        // PERUBAHAN: Tampilkan error ke user
+        toast.error(error.message);
       } finally {
         setIsLoading(false);
       }

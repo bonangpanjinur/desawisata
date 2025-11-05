@@ -1,11 +1,14 @@
 /**
  * LOKASI FILE: src/lib/api.js
- * PERBAIKAN: 
+ * PERUBAHAN:
  * 1. Menambahkan 'export' di depan 'apiFetch' dan 'apiUploadFile'.
  * 2. Menambahkan fungsi 'apiGetReviews' yang hilang.
+ * 3. Menambahkan INTERCEPTOR RESPON ERROR (BARU) untuk mem-parsing pesan error
+ * spesifik dari server sebelum error tersebut ditangkap oleh komponen.
  */
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore'; 
+import { toast } from 'react-hot-toast'; // Impor toast untuk error global
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/dw/v1';
 
@@ -13,6 +16,7 @@ export const apiFetch = axios.create({ // PERBAIKAN: export
   baseURL: BASE_URL,
 });
 
+// Interceptor untuk menambahkan token Auth
 apiFetch.interceptors.request.use(
   (config) => {
     const { token } = useAuthStore.getState();
@@ -25,6 +29,48 @@ apiFetch.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// --- INTERCEPTOR RESPON ERROR (BARU) ---
+// Ini adalah inti dari perbaikan Anda.
+// Ini akan menangkap SEMUA error dari apiFetch
+apiFetch.interceptors.response.use(
+  (response) => response, // Biarkan respon sukses lolos
+  (error) => {
+    // Fungsi ini akan berjalan SETIAP KALI API call gagal
+    let specificMessage = 'Terjadi kesalahan. Silakan coba lagi nanti.';
+
+    if (error.response) {
+      // Server merespon dengan status error (4xx, 5xx)
+      const data = error.response.data;
+      
+      // Coba cari pesan error spesifik dari backend
+      if (data && data.message) {
+        specificMessage = data.message;
+      } else if (data && data.error) {
+        specificMessage = data.error;
+      } else if (typeof data === 'string' && data.length < 150) {
+        // Kadang backend hanya merespon string error
+        specificMessage = data;
+      } else if (error.response.statusText) {
+        // Fallback ke status text
+        specificMessage = `${error.response.status}: ${error.response.statusText}`;
+      }
+      
+    } else if (error.request) {
+      // Request dibuat tapi tidak ada respon (masalah jaringan)
+      specificMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
+    } else {
+      // Kesalahan lain saat setup request
+      specificMessage = error.message;
+    }
+    
+    // Lemparkan error baru HANYA DENGAN PESAN SPESIFIK.
+    // Ini yang akan ditangkap oleh .catch() di halaman/store Anda.
+    return Promise.reject(new Error(specificMessage));
+  }
+);
+// --- AKHIR INTERCEPTOR BARU ---
+
 
 // --- OTENTIKASI ---
 export const apiLogin = async (username, password) => {
@@ -162,4 +208,3 @@ export const apiClearMyCart = async () => {
   const { data } = await apiFetch.delete('/pembeli/cart');
   return data;
 };
-

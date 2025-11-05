@@ -1,7 +1,7 @@
 // src/pages/checkout.js
-// PERBAIKAN: Mengubah impor default 'useCartStore' dan 'useAuthStore' menjadi impor bernama.
-// import useCartStore from '@/store/cartStore'; // <-- INI SALAH
-// import useAuthStore from '@/store/authStore'; // <-- INI SALAH
+// PERUBAHAN: 
+// 1. Mengubah impor default 'useCartStore' dan 'useAuthStore' menjadi impor bernama.
+// 2. Mengubah `toast.error(\`...\${err.message}\`)` menjadi `toast.error(err.message)`.
 import { useCartStore } from '@/store/cartStore'; // <-- INI BENAR
 import { useAuthStore } from '@/store/authStore'; // <-- INI BENAR
 
@@ -60,7 +60,8 @@ export default function CheckoutPage() {
           }
         } catch (err) {
           console.error("Gagal memuat alamat:", err);
-          toast.error(`Gagal memuat alamat: ${err.message}`);
+          // PERUBAHAN: Tampilkan pesan error spesifik
+          toast.error(err.message);
         } finally {
           setLoadingAddress(false);
         }
@@ -100,7 +101,8 @@ export default function CheckoutPage() {
 
       } catch (err) {
         console.error("Gagal hitung ongkir:", err);
-        toast.error(`Gagal menghitung ongkir: ${err.message}`);
+        // PERUBAHAN: Tampilkan pesan error spesifik
+        toast.error(err.message);
         setShippingOptions({}); 
       } finally {
         setLoadingShipping(false);
@@ -193,7 +195,8 @@ export default function CheckoutPage() {
 
     } catch (err) {
       console.error("Gagal membuat pesanan:", err);
-      toast.error(`Gagal membuat pesanan: ${err.message}`);
+      // PERUBAHAN: Tampilkan pesan error spesifik
+      toast.error(err.message);
       setLoadingOrder(false); 
     } 
   };

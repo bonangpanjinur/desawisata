@@ -1,6 +1,7 @@
 // src/pages/akun.js
-// PERBAIKAN: Mengubah impor default 'useAuthStore' menjadi impor bernama.
-// import useAuthStore from '@/store/authStore'; // <-- INI SALAH
+// PERUBAHAN: 
+// 1. Mengubah impor default 'useAuthStore' menjadi impor bernama.
+// 2. Mengubah `toast.error("pesan.. " + error.message)` menjadi `toast.error(error.message)`.
 import { useAuthStore } from '@/store/authStore'; // <-- INI BENAR
 
 import { useState, useEffect } from 'react';
@@ -54,11 +55,13 @@ export default function Akun() {
         const redirectPath = router.query.redirect || '/';
         router.push(redirectPath);
       } else {
+        // Ini seharusnya tidak terjadi jika interceptor bekerja
         toast.error('Login gagal. Cek kembali username/password Anda.');
       }
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Terjadi kesalahan saat login.');
+      // PERUBAHAN: Tampilkan pesan error spesifik dari server
+      toast.error(error.message);
     } finally {
       setLoading(false); 
     }
@@ -89,7 +92,8 @@ export default function Akun() {
 
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Registrasi gagal. Pastikan data unik.');
+      // PERUBAHAN: Tampilkan pesan error spesifik dari server
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -120,7 +124,8 @@ export default function Akun() {
     } catch (error) {
       toast.dismiss();
       console.error(error);
-      toast.error(error.message || 'Gagal memperbarui profil.');
+      // PERUBAHAN: Tampilkan pesan error spesifik dari server
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }

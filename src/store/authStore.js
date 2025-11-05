@@ -1,12 +1,16 @@
 /**
  * LOKASI FILE: src/store/authStore.js
- * PERBAIKAN: Mengembalikan ke `export const` (bukan default)
- * agar sesuai dengan impor di file lain.
+ * PERUBAHAN:
+ * 1. Mengembalikan ke `export const` (bukan default).
+ * 2. Menyederhanakan block `catch` agar melemparkan error (yang sudah diproses
+ * oleh interceptor di api.js) ke komponen/halaman.
+ * 3. Menambahkan toast error pada `logout`.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { apiLogin, apiRegister, apiSyncMyCart, apiClearMyCart, apiGetMyCart } from '@/lib/api';
 import { useCartStore } from './cartStore'; // Impor bernama
+import { toast } from 'react-hot-toast'; // Impor toast
 
 export const useAuthStore = create( // PERBAIKAN: 'export const'
   persist(
@@ -31,7 +35,8 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           }
           return data;
         } catch (error) {
-          throw new Error(error.response?.data?.message || error.message);
+          // PERUBAHAN: Sederhanakan. Lemparkan error agar ditangkap oleh halaman.
+          throw error;
         }
       },
       
@@ -40,7 +45,8 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           const data = await apiRegister(username, email, password, nama_lengkap);
           return data;
         } catch (error) {
-          throw new Error(error.response?.data?.message || error.message);
+          // PERUBAHAN: Sederhanakan. Lemparkan error agar ditangkap oleh halaman.
+          throw error;
         }
       },
       
@@ -49,6 +55,8 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           await apiClearMyCart();
         } catch (error) {
           console.error("Gagal membersihkan keranjang server saat logout:", error);
+          // PERUBAHAN: Tampilkan error ke user
+          toast.error("Gagal membersihkan keranjang server saat logout.");
         } finally {
           useCartStore.setState({ cart: [] });
           set({ user: null, token: null });
@@ -64,4 +72,3 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
 );
 
 // Hapus 'export default'
-

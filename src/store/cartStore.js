@@ -1,14 +1,16 @@
 /**
  * LOKASI FILE: src/store/cartStore.js
- * PERBAIKAN: 
+ * PERUBAHAN: 
  * 1. Mengembalikan ke `export const` (bukan default).
- * 2. Menambahkan null check ( `cart?.reduce` ) di helper 
- * untuk memperbaiki error 'reduce' of undefined saat prerender.
+ * 2. Menambahkan null check ( `cart?.reduce` ) di helper.
+ * 3. Menambahkan `toast.error` pada `debouncedSyncCart` agar error
+ * sinkronisasi di latar belakang terlihat oleh user.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { apiSyncMyCart } from '@/lib/api'; 
 import { useAuthStore } from './authStore'; 
+import { toast } from 'react-hot-toast'; // Impor toast
 
 // Helper untuk debounce (menunda eksekusi)
 function debounce(func, wait) {
@@ -32,6 +34,8 @@ const debouncedSyncCart = debounce(async (cart) => {
       await apiSyncMyCart(cart); 
     } catch (error) {
       console.error("Gagal sinkronisasi keranjang (debounced):", error);
+      // PERUBAHAN: Tampilkan error ke user
+      toast.error(`Gagal sinkronisasi keranjang: ${error.message}`);
     }
   }
 }, 1500); 
@@ -126,4 +130,3 @@ export const useCartStore = create( // PERBAIKAN: 'export const'
 );
 
 // Hapus 'export default'
-
