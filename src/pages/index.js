@@ -1,5 +1,5 @@
 // File: src/pages/index.js
-// PERBAIKAN: Mengganti filter "unggulan=true" menjadi mengambil data terbaru.
+// PERBAIKAN: Menghapus bagian "Jelajahi Desa" sesuai permintaan.
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -15,12 +15,11 @@ import { IconArrowUpRight, IconMapPin, IconStore, IconSearch } from '@/component
 export async function getServerSideProps() {
   try {
     // Ambil data secara paralel
-    // --- PERBAIKAN: Hapus ?unggulan=true untuk mengambil data terbaru ---
-    const [banners, products, wisata, desa, kategori] = await Promise.all([
+    // --- PERBAIKAN: Menghapus fetch data "/desa" ---
+    const [banners, products, wisata, kategori] = await Promise.all([
       apiFetch('/banner'),
       apiFetch('/produk?per_page=6'), // Mengambil 6 produk terbaru
       apiFetch('/wisata?per_page=6'), // Mengambil 6 wisata terbaru
-      apiFetch('/desa?per_page=6'),
       apiFetch('/kategori/produk?per_page=8'), // Ambil 8 kategori populer
     ]);
     // --- AKHIR PERBAIKAN ---
@@ -31,17 +30,18 @@ export async function getServerSideProps() {
         banners: banners || [],
         featuredProducts: products.data || [], // Tetap gunakan nama prop `featuredProducts`
         featuredWisata: wisata.data || [], // Tetap gunakan nama prop `featuredWisata`
-        desa: desa.data || [],
         kategori: kategori || [],
+        // --- PERBAIKAN: Hapus 'desa' dari props ---
       },
     };
   } catch (error) {
     console.error("Gagal fetch data beranda:", error);
-    return { props: { banners: [], featuredProducts: [], featuredWisata: [], desa: [], kategori: [] } };
+    // --- PERBAIKAN: Hapus 'desa' dari props error ---
+    return { props: { banners: [], featuredProducts: [], featuredWisata: [], kategori: [] } };
   }
 }
 
-export default function HomePage({ banners, featuredProducts, featuredWisata, desa, kategori }) {
+export default function HomePage({ banners, featuredProducts, featuredWisata, kategori }) {
   const router = useRouter();
 
   return (
@@ -96,36 +96,17 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, de
         </div>
       </section>
 
-      {/* Bagian Desa */}
-      <section>
+      {/* --- PERBAIKAN: Bagian Desa Dihapus --- */}
+      {/* <section>
         <div className="mb-4 flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-bold">Jelajahi Desa</h2>
             <Link href="/desa" className="flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark">
               Lihat Semua <IconArrowUpRight className="h-4 w-4" />
             </Link>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {desa.length > 0 ? (
-            desa.map(d => (
-              <Link key={d.id} href={`/desa/${d.id}`}>
-                <div className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg">
-                  <img
-                    src={d.foto || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
-                    alt={d.nama_desa}
-                    className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
-                  />
-                  <div className="flex-1 overflow-hidden">
-                    <h3 className="truncate font-semibold">{d.nama_desa}</h3>
-                    <p className="mt-1 truncate text-sm text-gray-500">{d.kabupaten}</p>
-                  </div>
-                </div>
-              </Link>
-            ))
-          ) : (
-            <p className="text-gray-500">Belum ada desa yang terdaftar.</p>
-          )}
-        </div>
+        ... (konten desa dihapus) ...
       </section>
+      */}
 
     </Layout>
   );
