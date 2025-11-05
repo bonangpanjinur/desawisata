@@ -1,12 +1,13 @@
 /**
  * LOKASI FILE: src/pages/pesanan/[id].js
  * PERUBAHAN:
- * 1. Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail'.
+ * 1. Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail' (sesuai api.js).
  * 2. Mengubah `toast.error("...")` menjadi `toast.error(error.message)`.
+ * 3. Mengubah impor authStore menjadi impor bernama.
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAuthStore } from '@/store/authStore'; // Impor bernama
+import { useAuthStore } from '@/store/authStore'; // PERBAIKAN: Impor bernama
 import Layout from '@/components/Layout';
 import { apiGetMyOrderDetail, apiUploadFile, apiConfirmPayment } from '@/lib/api'; // PERBAIKAN NAMA FUNGSI
 import { formatCurrency } from '@/lib/utils';
@@ -16,7 +17,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 export default function PesananDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const { user, token } = useAuthStore(); // Impor bernama
+  const { user, token } = useAuthStore(); // PERBAIKAN: Panggil sebagai fungsi
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState(null);
@@ -118,14 +119,14 @@ export default function PesananDetail() {
           <div className="mb-4">
             <p><strong>Status:</strong> <span className={`font-semibold ${isPaymentPending ? 'text-yellow-600' : 'text-green-600'}`}>{order.status_transaksi.replace('_', ' ')}</span></p>
             <p><strong>Tanggal:</strong> {new Date(order.tanggal_transaksi).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            <p className="text-xl font-bold mt-2">Total: Rp {formatCurrency(order.total_transaksi)}</p>
+            <p className="text-xl font-bold mt-2">Total: {formatCurrency(order.total_transaksi)}</p>
           </div>
 
           {/* Instruksi Pembayaran (jika menunggu) */}
           {isPaymentPending && (
             <div className="border-t pt-4 mt-4">
               <h2 className="text-lg font-semibold mb-2">Instruksi Pembayaran</h2>
-              <p>Silakan transfer sejumlah <strong>Rp {formatCurrency(order.total_transaksi)}</strong> ke rekening berikut:</p>
+              <p>Silakan transfer sejumlah <strong>{formatCurrency(order.total_transaksi)}</strong> ke rekening berikut:</p>
               <div className="my-2 p-3 bg-gray-100 rounded">
                 <p><strong>Bank BCA:</strong> 123456789 (a/n Desa Wisata)</p>
                 <p><strong>Bank Mandiri:</strong> 987654321 (a/n Desa Wisata)</p>
@@ -168,13 +169,13 @@ export default function PesananDetail() {
                 <h3 className="font-semibold text-gray-800">Toko: {subOrder.nama_toko}</h3>
                 <p className="text-sm text-gray-600">Status Toko: {subOrder.status_pesanan.replace('_', ' ')}</p>
                 <p className="text-sm text-gray-600">Metode Pengiriman: {subOrder.metode_pengiriman.replace('_', ' ')}</p>
-                <p className="text-sm text-gray-600">Ongkir Toko Ini: Rp {formatCurrency(subOrder.ongkir)}</p>
+                <p className="text-sm text-gray-600">Ongkir Toko Ini: {formatCurrency(subOrder.ongkir)}</p>
                 
                 <ul className="mt-2 list-disc list-inside space-y-1">
                   {subOrder.items.map(item => (
                     <li key={item.id} className="text-sm">
                       {item.nama_produk} {item.nama_variasi && `(${item.nama_variasi})`} x {item.jumlah} 
-                      <span className="float-right">Rp {formatCurrency(item.total_harga)}</span>
+                      <span className="float-right">{formatCurrency(item.total_harga)}</span>
                     </li>
                   ))}
                 </ul>

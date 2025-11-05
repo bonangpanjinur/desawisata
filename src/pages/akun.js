@@ -2,24 +2,28 @@
 // PERUBAHAN: 
 // 1. Mengubah impor default 'useAuthStore' menjadi impor bernama.
 // 2. Mengubah `toast.error("pesan.. " + error.message)` menjadi `toast.error(error.message)`.
-import { useAuthStore } from '@/store/authStore'; // <-- INI BENAR
+import { useAuthStore } from '@/store/authStore'; // <-- PERBAIKAN: Impor bernama
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { apiFetch, apiUpdateProfile } from '@/lib/api'; 
+// PERBAIKAN: Impor apiRegister, bukan apiFetch
+import { apiRegister, apiUpdateProfile } from '@/lib/api'; 
 import { toast } from 'react-hot-toast'; 
-import LoadingSpinner from '@/components/LoadingSpinner'; // Import LoadingSpinner
+import LoadingSpinner from '@/components/LoadingSpinner'; 
+// PERBAIKAN: Impor ikon yang hilang
+import { IconEye, IconEyeOff } from '@/components/icons'; 
 
 export default function Akun() {
   const router = useRouter();
-  // Sekarang 'useAuthStore' adalah fungsi yang benar dari impor bernama
+  // PERBAIKAN: 'useAuthStore' sekarang adalah fungsi yang benar
   const { user, login, logout } = useAuthStore();
 
   // State untuk form
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // PERBAIKAN: State untuk lihat password
   const [email, setEmail] = useState('');
   const [namaLengkap, setNamaLengkap] = useState('');
 
@@ -48,16 +52,15 @@ export default function Akun() {
 
     setLoading(true); 
     try {
-      const success = await login(username, password);
-      if (success) {
+      // Fungsi 'login' dari authStore sudah di-wrap interceptor
+      const data = await login(username, password); 
+      if (data) {
         toast.success('Login berhasil!');
         // Cek jika ada redirect URL
         const redirectPath = router.query.redirect || '/';
         router.push(redirectPath);
-      } else {
-        // Ini seharusnya tidak terjadi jika interceptor bekerja
-        toast.error('Login gagal. Cek kembali username/password Anda.');
       }
+      // Error sudah ditangani oleh authStore/interceptor
     } catch (error) {
       console.error(error);
       // PERUBAHAN: Tampilkan pesan error spesifik dari server
@@ -73,15 +76,8 @@ export default function Akun() {
 
     setLoading(true);
     try {
-      await apiFetch('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          username,
-          password,
-          email,
-          nama_lengkap: namaLengkap,
-        }),
-      });
+      // PERBAIKAN: Panggil apiRegister
+      await apiRegister(username, email, password, namaLengkap);
       
       toast.success('Registrasi berhasil! Silakan login.');
       setIsLogin(true); 
@@ -107,19 +103,12 @@ export default function Akun() {
     toast.loading('Menyimpan profil...'); 
 
     try {
-      // NOTE: Pastikan 'apiUpdateProfile' ada di 'src/lib/api.js'
-      // dan melakukan POST ke '/pembeli/profile/me'
+      // TODO: Implementasi apiUpdateProfile di api.js
       // const updatedUser = await apiUpdateProfile(editData);
       
-      // Untuk sementara, kita simulasi
       await new Promise(res => setTimeout(res, 1000)); 
-      // const updatedUser = { ...user, ...editData };
-
+      
       toast.dismiss();
-      
-      // TODO: Update user di authStore jika API tidak mengembalikannya
-      // useAuthStore.setState({ user: updatedUser });
-      
       toast.success('Fitur update profil sedang dalam pengembangan.');
     } catch (error) {
       toast.dismiss();
@@ -199,13 +188,13 @@ export default function Akun() {
           <div className="flex justify-center mb-6">
             <button
               onClick={() => setIsLogin(true)}
-              className={`py-2 px-6 ${isLogin ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
+              className={`py-2 px-6 font-semibold ${isLogin ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
             >
               Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`py-2 px-6 ${!isLogin ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
+              className={`py-2 px-6 font-semibold ${!isLogin ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
             >
               Daftar
             </button>
@@ -228,25 +217,32 @@ export default function Akun() {
                   required
                 />
               </div>
-              <div className="mb-6">
+              <div className="mb-6 relative">
                 <label className="block text-gray-700 mb-2" htmlFor="login-password">
                   Password
                 </label>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="login-password"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-10 text-gray-500"
+                >
+                  {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+                </button>
               </div>
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
               >
-                {loading ? 'Loading...' : 'Login'}
+                {loading ? <LoadingSpinner /> : 'Login'}
               </button>
             </form>
           ) : (
@@ -292,25 +288,32 @@ export default function Akun() {
                   required
                 />
               </div>
-              <div className="mb-6">
+              <div className="mb-6 relative">
                 <label className="block text-gray-700 mb-2" htmlFor="reg-password">
                   Password
                 </label>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="reg-password"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-10 text-gray-500"
+                >
+                  {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+                </button>
               </div>
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
               >
-                {loading ? 'Mendaftar...' : 'Daftar'}
+                {loading ? <LoadingSpinner /> : 'Daftar'}
               </button>
             </form>
           )}

@@ -1,8 +1,12 @@
 // src/components/ProductCard.js
-// PERBAIKAN: Mengambil gambar dari galeri jika gambar unggulan tidak ada.
+// PERBAIKAN: 
+// 1. Mengambil gambar dari galeri jika gambar unggulan tidak ada.
+// 2. Menambahkan `unoptimized={true}` pada Next/Image untuk error 400.
+// 3. Mengakses harga variasi dengan benar.
 import Link from 'next/link';
 import Image from 'next/image';
 import { IconMapPin, IconStore } from './icons';
+import { formatCurrency } from '@/lib/utils'; // Impor formatCurrency
 
 const placeholderImg = "https://placehold.co/400x300/f4f4f5/a1a1aa?text=Sadesa";
 
@@ -18,13 +22,23 @@ export default function ProductCard({ product }) {
                    || placeholderImg;
   // --- AKHIR PERBAIKAN ---
   
-  const linkUrl = `/produk/${product.slug}`; 
+  const linkUrl = `/produk/${product.slug}`; // PERBAIKAN: Ganti 'product' ke 'produk'
   
-  let displayPrice = product.harga_dasar;
-  if (product.variasi && product.variasi.length > 0) {
-    const prices = product.variasi.map(v => parseFloat(v.harga));
-    displayPrice = Math.min(...prices);
+  let displayPrice = product.harga_tampil; // Gunakan harga_tampil dari API
+  let hasVariations = product.variasi && product.variasi.length > 0;
+
+  // Fallback jika harga_tampil tidak ada
+  if (displayPrice === null || displayPrice === undefined) {
+    displayPrice = product.harga_dasar;
+    if (hasVariations) {
+      // PERBAIKAN: Akses harga variasi dari 'harga_variasi'
+      const prices = product.variasi.map(v => parseFloat(v.harga_variasi));
+      if (prices.length > 0) {
+        displayPrice = Math.min(...prices);
+      }
+    }
   }
+
 
   return (
     <Link href={linkUrl} className="group flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl">
@@ -61,8 +75,9 @@ export default function ProductCard({ product }) {
         {/* Harga (diletakkan di bawah) */}
         <div className="mt-auto pt-4">
           <p className="text-lg font-bold text-primary">
-            {displayPrice > 0 ? `Rp ${displayPrice.toLocaleString('id-ID')}` : 'Gratis'}
-            {product.variasi && product.variasi.length > 0 && <span className="text-xs font-normal text-gray-500"> (mulai dari)</span>}
+            {/* PERBAIKAN: Gunakan formatCurrency */}
+            {displayPrice > 0 ? formatCurrency(displayPrice) : 'Gratis'}
+            {hasVariations && <span className="text-xs font-normal text-gray-500"> (mulai dari)</span>}
           </p>
         </div>
       </div>

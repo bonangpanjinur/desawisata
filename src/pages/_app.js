@@ -4,14 +4,15 @@
 
 import '@/styles/globals.css';
 import { Toaster } from 'react-hot-toast';
-import useAuthStore from '@/store/authStore';
-import useCartStore from '@/store/cartStore';
-import { useEffect } from 'react';
+// PERBAIKAN: Impor store tidak diperlukan di sini
+// import { useAuthStore } from '@/store/authStore';
+// import { useCartStore } from '@/store/cartStore';
+// import { useEffect } from 'react';
 
 function MyApp({ Component, pageProps }) {
   
-  // PERBAIKAN: Blok 'useEffect' ini tidak lagi diperlukan
-  // karena 'persist' middleware sudah menangani hidrasi secara otomatis.
+  // PERBAIKAN: Blok 'useEffect' ini dihapus
+  // 'persist' middleware sudah menangani hidrasi secara otomatis.
   /*
   useEffect(() => {
     useAuthStore.getState().hydrate();

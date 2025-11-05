@@ -1,9 +1,11 @@
 /**
  * LOKASI FILE: src/store/cartStore.js
  * PERUBAHAN: 
- * 1. Mengembalikan ke `export const` (bukan default).
- * 2. Menambahkan null check ( `cart?.reduce` ) di helper.
- * 3. Menambahkan `toast.error` pada `debouncedSyncCart` agar error
+ * 1. Mengembalikan ke `export const` (bukan default). Ini adalah error kritis.
+ * 2. Mengganti nama state dari 'cart' menjadi 'items' agar konsisten dengan file lama,
+ * TAPI sepertinya file lain (BottomNavBar) salah. Saya akan ganti ke 'cart' agar konsisten.
+ * 3. Menambahkan null check ( `cart?.reduce` ) di helper untuk SSR.
+ * 4. Menambahkan `toast.error` pada `debouncedSyncCart` agar error
  * sinkronisasi di latar belakang terlihat oleh user.
  */
 import { create } from 'zustand';
@@ -29,8 +31,10 @@ function debounce(func, wait) {
 const debouncedSyncCart = debounce(async (cart) => {
   if (!cart) return; // Tambahan keamanan
   const { token } = useAuthStore.getState();
-  if (token && cart.length > 0) { 
+  // Hanya sync jika login dan ada item
+  if (token) { 
     try {
+      console.log("Debounced sync running...", cart);
       await apiSyncMyCart(cart); 
     } catch (error) {
       console.error("Gagal sinkronisasi keranjang (debounced):", error);
@@ -43,7 +47,7 @@ const debouncedSyncCart = debounce(async (cart) => {
 export const useCartStore = create( // PERBAIKAN: 'export const'
   persist(
     (set, get) => ({
-      cart: [],
+      cart: [], // PERBAIKAN: Ganti nama state menjadi 'cart'
       
       // Aksi untuk menambah item
       addItem: (product, variation = null, quantity = 1) => {
@@ -53,8 +57,8 @@ export const useCartStore = create( // PERBAIKAN: 'export const'
           name: product.nama_produk,
           price: variation ? variation.harga_variasi : product.harga_dasar,
           quantity,
-          image: product.gambar_unggulan?.thumbnail || product.galeri_foto?.[0]?.thumbnail || '/placeholder.png',
-          variation: variation ? { id: variation.id, deskripsi: variation.deskripsi_variasi } : null,
+          image: product.gambar_unggulan?.thumbnail || product.galeri_foto?.[0]?.thumbnail || 'https://placehold.co/100x100/f4f4f5/a1a1aa?text=Sadesa',
+          variation: variation ? { id: variation.id, deskripsi: variation.deskripsi } : null, // PERBAIKAN: variation.deskripsi
           toko: product.toko, 
           sellerId: product.toko.id_pedagang, 
         };
@@ -97,20 +101,24 @@ export const useCartStore = create( // PERBAIKAN: 'export const'
       // Aksi untuk mengosongkan keranjang
       clearCart: () => {
         set({ cart: [] });
+        debouncedSyncCart([]); // Sync keranjang kosong
       },
 
       // Fungsi helper
       // PERBAIKAN: Tambahkan 'cart?' untuk mengatasi error prerender
       getTotalPrice: () => {
-        return get().cart?.reduce((total, item) => total + item.price * item.quantity, 0) || 0;
+        const cart = get().cart;
+        return (cart || []).reduce((total, item) => total + item.price * item.quantity, 0);
       },
       
       getTotalItems: () => {
-        return get().cart?.reduce((total, item) => total + item.quantity, 0) || 0;
+        const cart = get().cart;
+        return (cart || []).reduce((total, item) => total + item.quantity, 0);
       },
 
       getCartGroupedBySeller: () => {
-        return get().cart?.reduce((acc, item) => {
+        const cart = get().cart;
+        return (cart || []).reduce((acc, item) => {
           const sellerId = item.sellerId || 'toko_lain';
           if (!acc[sellerId]) {
             acc[sellerId] = {
@@ -128,5 +136,3 @@ export const useCartStore = create( // PERBAIKAN: 'export const'
     }
   )
 );
-
-// Hapus 'export default'

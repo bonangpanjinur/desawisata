@@ -2,9 +2,11 @@
  * LOKASI FILE: src/lib/api.js
  * PERUBAHAN:
  * 1. Menambahkan 'export' di depan 'apiFetch' dan 'apiUploadFile'.
- * 2. Menambahkan fungsi 'apiGetReviews' yang hilang.
+ * 2. Menambahkan fungsi 'apiGetReviews' dan 'apiGetProdukDetail' (by slug) yang hilang.
  * 3. Menambahkan INTERCEPTOR RESPON ERROR (BARU) untuk mem-parsing pesan error
  * spesifik dari server sebelum error tersebut ditangkap oleh komponen.
+ * INI ADALAH PERBAIKAN UTAMA untuk "tidak menampilkan apa-apa" karena
+ * sekarang error dari backend akan muncul sebagai toast.
  */
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore'; 
@@ -34,7 +36,7 @@ apiFetch.interceptors.request.use(
 // Ini adalah inti dari perbaikan Anda.
 // Ini akan menangkap SEMUA error dari apiFetch
 apiFetch.interceptors.response.use(
-  (response) => response, // Biarkan respon sukses lolos
+  (response) => response.data, // PERBAIKAN: Langsung kembalikan 'response.data'
   (error) => {
     // Fungsi ini akan berjalan SETIAP KALI API call gagal
     let specificMessage = 'Terjadi kesalahan. Silakan coba lagi nanti.';
@@ -43,7 +45,7 @@ apiFetch.interceptors.response.use(
       // Server merespon dengan status error (4xx, 5xx)
       const data = error.response.data;
       
-      // Coba cari pesan error spesifik dari backend
+      // Coba cari pesan error spesifik dari backend WordPress
       if (data && data.message) {
         specificMessage = data.message;
       } else if (data && data.error) {
@@ -74,12 +76,13 @@ apiFetch.interceptors.response.use(
 
 // --- OTENTIKASI ---
 export const apiLogin = async (username, password) => {
-  const { data } = await apiFetch.post('/auth/login', { username, password });
+  // PERBAIKAN: Hapus .data karena interceptor sudah melakukannya
+  const data = await apiFetch.post('/auth/login', { username, password });
   return data;
 };
 
 export const apiRegister = async (username, email, password, nama_lengkap) => {
-  const { data } = await apiFetch.post('/auth/register', {
+  const data = await apiFetch.post('/auth/register', {
     username,
     email,
     password,
@@ -90,94 +93,95 @@ export const apiRegister = async (username, email, password, nama_lengkap) => {
 
 // --- DATA PUBLIK ---
 export const apiGetBanners = async () => {
-  const { data } = await apiFetch.get('/banner');
+  const data = await apiFetch.get('/banner');
   return data;
 };
 
 export const apiGetKategoriProduk = async () => {
-  const { data } = await apiFetch.get('/kategori/produk');
+  const data = await apiFetch.get('/kategori/produk');
   return data;
 };
 
 export const apiGetKategoriWisata = async () => {
-  const { data } = await apiFetch.get('/kategori/wisata');
+  const data = await apiFetch.get('/kategori/wisata');
   return data;
 };
 
 export const apiGetDesa = async (params) => {
-  const { data } = await apiFetch.get('/desa', { params });
+  const data = await apiFetch.get('/desa', { params });
   return data;
 };
 
 export const apiGetDesaDetail = async (id) => {
-  const { data } = await apiFetch.get(`/desa/${id}`);
+  const data = await apiFetch.get(`/desa/${id}`);
   return data;
 };
 
 export const apiGetProduk = async (params) => {
-  const { data } = await apiFetch.get('/produk', { params });
+  const data = await apiFetch.get('/produk', { params });
   return data;
 };
 
+// PERBAIKAN: Fungsi ini hilang di file Anda, dibutuhkan oleh [slug].js
 export const apiGetProdukDetail = async (slug) => {
-  const { data } = await apiFetch.get(`/produk/slug/${slug}`);
+  const data = await apiFetch.get(`/produk/slug/${slug}`);
   return data;
 };
 
 export const apiGetWisata = async (params) => {
-  const { data } = await apiFetch.get('/wisata', { params });
+  const data = await apiFetch.get('/wisata', { params });
   return data;
 };
 
 export const apiGetWisataDetail = async (slug) => {
-  const { data } = await apiFetch.get(`/wisata/slug/${slug}`);
+  const data = await apiFetch.get(`/wisata/slug/${slug}`);
   return data;
 };
 
 export const apiGetTokoDetail = async (id, params) => {
-  const { data } = await apiFetch.get(`/toko/${id}`, { params });
+  const data = await apiFetch.get(`/toko/${id}`, { params });
   return data;
 };
 
 export const apiGetPublicSettings = async () => {
-  const { data } = await apiFetch.get('/settings');
+  const data = await apiFetch.get('/settings');
   return data;
 };
 
 // --- FUNGSI BARU YANG HILANG ---
 export const apiGetReviews = async (target_type, target_id, params) => {
-  const { data } = await apiFetch.get(`/reviews/${target_type}/${target_id}`, { params });
+  const data = await apiFetch.get(`/reviews/${target_type}/${target_id}`, { params });
   return data;
 };
 
 // --- DATA PEMBELI (AUTH) ---
 export const apiGetAlamat = async () => {
-  const { data } = await apiFetch.get('/pembeli/addresses');
+  const data = await apiFetch.get('/pembeli/addresses');
   return data;
 };
 
 export const apiGetMyOrders = async () => {
-  const { data } = await apiFetch.get('/pembeli/orders');
+  const data = await apiFetch.get('/pembeli/orders');
   return data;
 };
 
 export const apiGetMyOrderDetail = async (id) => {
-  const { data } = await apiFetch.get(`/pembeli/orders/${id}`);
+  const data = await apiFetch.get(`/pembeli/orders/${id}`);
   return data;
 };
 
 export const apiGetShippingOptions = async (payload) => {
-  const { data } = await apiFetch.post('/shipping-options', payload);
+  const data = await apiFetch.post('/shipping-options', payload);
   return data;
 };
 
 export const apiCreateOrder = async (payload) => {
-  const { data } = await apiFetch.post('/pembeli/orders', payload);
+  const data = await apiFetch.post('/pembeli/orders', payload);
   return data;
 };
 
 export const apiConfirmPayment = async (payload) => {
-  const { data } = await apiFetch.post('/pembeli/orders/confirm-payment', payload);
+  const data = await apiFetch.post('/pembeli/orders/confirm-payment', payload);
   return data;
 };
 
@@ -185,7 +189,7 @@ export const apiUploadFile = async (file) => { // PERBAIKAN: export
   const formData = new FormData();
   formData.append('file', file);
   
-  const { data } = await apiFetch.post('/pembeli/upload-media', formData, {
+  const data = await apiFetch.post('/pembeli/upload-media', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -195,16 +199,17 @@ export const apiUploadFile = async (file) => { // PERBAIKAN: export
 
 // --- FUNGSI SINKRONISASI KERANJANG (BARU) ---
 export const apiGetMyCart = async () => {
-  const { data } = await apiFetch.get('/pembeli/cart');
+  const data = await apiFetch.get('/pembeli/cart');
   return data;
 };
 
 export const apiSyncMyCart = async (items) => {
-  const { data } = await apiFetch.post('/pembeli/cart/sync', { items });
+  // PERBAIKAN: Backend mengharapkan { items: [...] }
+  const data = await apiFetch.post('/pembeli/cart/sync', { cart: items });
   return data;
 };
 
 export const apiClearMyCart = async () => {
-  const { data } = await apiFetch.delete('/pembeli/cart');
+  const data = await apiFetch.delete('/pembeli/cart');
   return data;
 };

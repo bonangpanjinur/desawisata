@@ -1,9 +1,11 @@
 // src/components/WisataCard.js
 // PERBAIKAN: Menyesuaikan akses data dengan struktur dari API (api-helpers.php)
 // PERBAIKAN: Menambahkan `unoptimized` pada Image untuk mengatasi error 400
+// PERBAIKAN: Menggunakan formatCurrency
 import Link from 'next/link';
 import Image from 'next/image';
 import { IconMapPin } from './icons';
+import { formatCurrency } from '@/lib/utils'; // Impor formatCurrency
 
 const placeholderImg = "https://placehold.co/400x300/f4f4f5/a1a1aa?text=Wisata";
 
@@ -14,12 +16,24 @@ export default function WisataCard({ wisata }) {
   const imageUrl = wisata.gambar_unggulan?.medium || placeholderImg;
   const linkUrl = `/wisata/${wisata.slug}`;
 
+  // PERBAIKAN: Akses data yang benar dari struktur API
   const namaDesa = wisata.desa?.nama_desa;
   const lokasiSingkat = wisata.desa?.kabupaten || wisata.lokasi?.alamat || 'Lokasi';
-  const hargaTiket = wisata.info?.harga_tiket || 0; 
+  // API mengirim 'harga_tiket' sebagai string ("Gratis", "10000", "Weekday 10rb")
+  const hargaTiketText = wisata.info?.harga_tiket || 'Info'; 
+  
+  // Coba format jika angka, jika tidak, tampilkan teks aslinya
+  let displayHarga = hargaTiketText;
+  if (hargaTiketText && !isNaN(Number(hargaTiketText))) {
+      displayHarga = formatCurrency(Number(hargaTiketText));
+  }
+  if (hargaTiketText.toLowerCase() === 'gratis') {
+      displayHarga = 'Gratis';
+  }
+
 
   return (
-    <Link href={linkUrl} className="overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl">
+    <Link href={linkUrl} className="group flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl">
       <div className="relative h-48 w-full">
         <Image
           src={imageUrl}
@@ -27,6 +41,7 @@ export default function WisataCard({ wisata }) {
           layout="fill"
           objectFit="cover"
           unoptimized={true} // **PENTING: Menambahkan unoptimized untuk menghindari error 400 Next/Image**
+          className="transition-transform duration-300 group-hover:scale-105"
           onError={(e) => (e.target.src = placeholderImg)}
         />
         {/* Badge Desa (jika ada) */}
@@ -36,7 +51,7 @@ export default function WisataCard({ wisata }) {
             </div>
         )}
       </div>
-      <div className="p-4">
+      <div className="flex flex-1 flex-col p-4">
         <h3 className="truncate font-semibold text-gray-800" title={wisata.nama_wisata}>
           {wisata.nama_wisata}
         </h3>
@@ -47,13 +62,12 @@ export default function WisataCard({ wisata }) {
           <span className="truncate">{lokasiSingkat}</span>
         </div>
 
-        {/* Harga Tiket */}
-        <p className="mt-4 text-lg font-bold text-primary">
-          {typeof hargaTiket === 'number' && hargaTiket > 0 
-            ? `Rp ${hargaTiket.toLocaleString('id-ID')}`
-            : (typeof hargaTiket === 'string' ? hargaTiket : 'Gratis')
-          }
-        </p>
+        {/* Harga Tiket (diletakkan di bawah) */}
+        <div className="mt-auto pt-4">
+          <p className="text-lg font-bold text-primary">
+            {displayHarga}
+          </p>
+        </div>
       </div>
     </Link>
   );
