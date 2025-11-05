@@ -5,20 +5,14 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'admin.bonang.my.id', // Domain backend WordPress
-        port: '',
-        pathname: '/**', // Izinkan semua path di domain ini
+        hostname: 'admin.bonang.my.id', // PERBAIKAN: Menambahkan domain backend Anda
       },
       {
         protocol: 'https',
         hostname: 'placehold.co', // Domain untuk gambar placeholder
-        port: '',
-        pathname: '/**', // Izinkan semua path di domain ini
       },
+      // Anda bisa menambahkan domain lain di sini jika perlu
     ],
-    // Menonaktifkan optimasi image default Next.js agar URL placeholder yang kompleks tidak rusak (400 Bad Request)
-    // NOTE: Ini hanya diterapkan jika Anda menghapus unoptimized={true} dari komponen Image.
-    // Saat ini, unoptimized={true} di komponen sudah menjadi solusi yang baik.
   },
 };
 
