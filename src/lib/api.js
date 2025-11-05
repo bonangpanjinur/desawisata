@@ -1,6 +1,6 @@
 /**
  * LOKASI FILE: src/lib/api.js
- * PERUBAHAN:
+ * PERBAIKAN:
  * 1. Menambahkan 'export' di depan 'apiFetch' dan 'apiUploadFile'.
  * 2. Menambahkan fungsi 'apiGetReviews' dan 'apiGetProdukDetail' (by slug) yang hilang.
  * 3. Menambahkan INTERCEPTOR RESPON ERROR (BARU) untuk mem-parsing pesan error
@@ -9,7 +9,7 @@
  * sekarang error dari backend akan muncul sebagai toast.
  */
 import axios from 'axios';
-import { useAuthStore } from '@/store/authStore'; 
+import { useAuthStore } from '@/store/authStore'; // PERBAIKAN: Impor bernama
 import { toast } from 'react-hot-toast'; // Impor toast untuk error global
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/dw/v1';
@@ -32,11 +32,10 @@ apiFetch.interceptors.request.use(
   }
 );
 
-// --- INTERCEPTOR RESPON ERROR (BARU) ---
-// Ini adalah inti dari perbaikan Anda.
+// --- INTERCEPTOR RESPON ERROR (PERBAIKAN BESAR) ---
 // Ini akan menangkap SEMUA error dari apiFetch
 apiFetch.interceptors.response.use(
-  (response) => response.data, // PERBAIKAN: Langsung kembalikan 'response.data'
+  (response) => response.data, // Kembalikan 'response.data' secara otomatis pada sukses
   (error) => {
     // Fungsi ini akan berjalan SETIAP KALI API call gagal
     let specificMessage = 'Terjadi kesalahan. Silakan coba lagi nanti.';
@@ -47,12 +46,13 @@ apiFetch.interceptors.response.use(
       
       // Coba cari pesan error spesifik dari backend WordPress
       if (data && data.message) {
-        specificMessage = data.message;
+        // Bersihkan tag HTML jika ada
+        specificMessage = data.message.replace(/<\/?[^>]+(>|$)/g, "").trim();
       } else if (data && data.error) {
         specificMessage = data.error;
-      } else if (typeof data === 'string' && data.length < 150) {
-        // Kadang backend hanya merespon string error
-        specificMessage = data;
+      } else if (typeof data === 'string' && data.includes('<p>')) {
+        // Jika backend mengirim halaman error HTML
+         specificMessage = "Terjadi error kritis di server (500).";
       } else if (error.response.statusText) {
         // Fallback ke status text
         specificMessage = `${error.response.status}: ${error.response.statusText}`;
@@ -76,7 +76,7 @@ apiFetch.interceptors.response.use(
 
 // --- OTENTIKASI ---
 export const apiLogin = async (username, password) => {
-  // PERBAIKAN: Hapus .data karena interceptor sudah melakukannya
+  // .data sudah di-handle oleh interceptor
   const data = await apiFetch.post('/auth/login', { username, password });
   return data;
 };
@@ -154,6 +154,12 @@ export const apiGetReviews = async (target_type, target_id, params) => {
   return data;
 };
 
+// --- ALAMAT (Endpoint baru) ---
+export const apiGetProvinsi = async () => {
+  const data = await apiFetch.get('/alamat/provinsi');
+  return data;
+}
+
 // --- DATA PEMBELI (AUTH) ---
 export const apiGetAlamat = async () => {
   const data = await apiFetch.get('/pembeli/addresses');
@@ -204,7 +210,7 @@ export const apiGetMyCart = async () => {
 };
 
 export const apiSyncMyCart = async (items) => {
-  // PERBAIKAN: Backend mengharapkan { items: [...] }
+  // PERBAIKAN: Backend mengharapkan { cart: [...] }
   const data = await apiFetch.post('/pembeli/cart/sync', { cart: items });
   return data;
 };

@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 // PERBAIKAN: Import useState dan useEffect
 import { useState, useEffect } from 'react'; 
-import { IconHome, IconSearch, IconCart, IconUser, IconMap } from './icons'; 
-import { useCartStore } from '@/store/cartStore';
+import { IconHome, IconSearch, IconCart, IconUser } from './icons'; 
+import { useCartStore } from '@/store/cartStore'; // PERBAIKAN: Impor bernama
 
 const navItems = [
   { href: '/', label: 'Beranda', icon: IconHome },

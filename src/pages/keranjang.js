@@ -1,10 +1,10 @@
 // src/pages/keranjang.js
 // PERBAIKAN: 
-// 1. Destructuring 'items' (nama state yang benar) dari store, bukan 'cart'.
-// 2. Memastikan (items || []).length digunakan untuk pengecekan.
+// 1. Destructuring 'cart' (nama state yang benar) dari store, bukan 'items'.
+// 2. Memastikan (cart || []).length digunakan untuk pengecekan.
 
 import Layout from '@/components/Layout';
-import { useCartStore } from '@/store/cartStore';
+import { useCartStore } from '@/store/cartStore'; // PERBAIKAN: Impor bernama
 import { IconX, IconPlus, IconMinus, IconCart } from '@/components/icons';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,15 +13,15 @@ import { formatCurrency } from '@/lib/utils';
 const placeholderImg = "https://placehold.co/100x100/f4f4f5/a1a1aa?text=Sadesa";
 
 export default function KeranjangPage() {
-  // PERBAIKAN: Destructuring 'items' (nama state yang benar di cartStore.js)
-  const { items, getTotalPrice, removeItem, updateQuantity } = useCartStore();
+  // PERBAIKAN: Destructuring 'cart' (nama state yang benar di cartStore.js)
+  const { cart, getTotalPrice, removeItem, updateQuantity } = useCartStore();
   
   // Panggil selector untuk mendapatkan total
   const total = getTotalPrice(); 
 
   // Kelompokkan item berdasarkan toko
-  // PERBAIKAN: Tambahkan (items || []) untuk keamanan SSR
-  const itemsByToko = (items || []).reduce((acc, item) => {
+  // PERBAIKAN: Tambahkan (cart || []) untuk keamanan SSR dan gunakan state 'cart'
+  const itemsByToko = (cart || []).reduce((acc, item) => {
     const tokoId = item.sellerId || 'toko-lain';
     if (!acc[tokoId]) {
       acc[tokoId] = {
@@ -37,8 +37,8 @@ export default function KeranjangPage() {
     <Layout>
       <h1 className="text-3xl font-bold mb-6">Keranjang Belanja</h1>
       
-      {/* PERBAIKAN: Gunakan (items || []).length */}
-      {(items || []).length === 0 ? (
+      {/* PERBAIKAN: Gunakan (cart || []).length */}
+      {(cart || []).length === 0 ? (
         <div className="text-center py-10">
           <IconCart className="mx-auto h-24 w-24 text-gray-300" />
           <p className="mt-4 text-lg text-gray-500">Keranjang Anda kosong.</p>
@@ -62,6 +62,7 @@ export default function KeranjangPage() {
                         alt={item.name}
                         width={80}
                         height={80}
+                        unoptimized={true} // PERBAIKAN: Tambahkan unoptimized
                         className="rounded-lg object-cover"
                         onError={(e) => e.target.src = placeholderImg}
                       />
@@ -125,4 +126,3 @@ export default function KeranjangPage() {
     </Layout>
   );
 }
-

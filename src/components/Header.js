@@ -35,6 +35,7 @@ export default function Header({ title }) { // PERBAIKAN: Terima 'title' dari La
     if (router.pathname.startsWith('/product/')) pageTitle = "Detail Produk";
     if (router.pathname.startsWith('/wisata/')) pageTitle = "Detail Wisata";
     if (router.pathname.startsWith('/desa/')) pageTitle = "Detail Desa";
+    if (router.pathname.startsWith('/toko/')) pageTitle = "Detail Toko";
     if (router.pathname === '/jelajah') pageTitle = "Jelajah";
     if (router.pathname === '/keranjang') pageTitle = "Keranjang";
     if (router.pathname === '/akun') pageTitle = "Akun Saya";

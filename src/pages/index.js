@@ -1,6 +1,7 @@
 // File: src/pages/index.js
 // PERBAIKAN: Memastikan data yang diterima dari getServerSideProps
 // di-passing dengan benar dan ditampilkan.
+// PERBAIKAN: Menggunakan apiGetProduk, apiGetWisata, dll.
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -8,7 +9,8 @@ import ProductCard from '@/components/ProductCard';
 import WisataCard from '@/components/WisataCard';
 import BannerCarousel from '@/components/BannerCarousel';
 import KategoriGrid from '@/components/KategoriGrid';
-import { apiFetch } from '@/lib/api';
+// PERBAIKAN: Impor fungsi API yang spesifik
+import { apiGetBanners, apiGetProduk, apiGetWisata, apiGetKategoriProduk } from '@/lib/api';
 import Link from 'next/link';
 import { IconArrowUpRight, IconMapPin, IconStore, IconSearch } from '@/components/icons';
 
@@ -17,10 +19,10 @@ export async function getServerSideProps() {
   try {
     // Ambil data secara paralel
     const [bannersRes, productsRes, wisataRes, kategoriRes] = await Promise.all([
-      apiFetch('/banner').catch(e => { console.error("Gagal fetch /banner:", e.message); return []; }),
-      apiFetch('/produk?per_page=6').catch(e => { console.error("Gagal fetch /produk:", e.message); return { data: [] }; }),
-      apiFetch('/wisata?per_page=6').catch(e => { console.error("Gagal fetch /wisata:", e.message); return { data: [] }; }),
-      apiFetch('/kategori/produk?per_page=8').catch(e => { console.error("Gagal fetch /kategori/produk:", e.message); return []; }),
+      apiGetBanners().catch(e => { console.error("Gagal fetch /banner:", e.message); return []; }),
+      apiGetProduk({ per_page: 6 }).catch(e => { console.error("Gagal fetch /produk:", e.message); return { data: [] }; }),
+      apiGetWisata({ per_page: 6 }).catch(e => { console.error("Gagal fetch /wisata:", e.message); return { data: [] }; }),
+      apiGetKategoriProduk({ per_page: 8 }).catch(e => { console.error("Gagal fetch /kategori/produk:", e.message); return []; }),
     ]);
 
     return {

@@ -1,5 +1,5 @@
 // File: src/components/icons.js
-// PERBAIKAN: Menambahkan ikon yang hilang (Eye, EyeOff, Wallet, Clock, FileUp)
+// PERBAIKAN: Menambahkan ikon yang hilang (Eye, EyeOff)
 import {
   Home,
   Search,

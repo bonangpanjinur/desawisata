@@ -1,7 +1,3 @@
-// File: next.config.js
-// LOKASI: Folder utama (root)
-//
-// PERBAIKAN: Memastikan konfigurasi domain Next.js Image sudah lengkap untuk backend dan placeholder.
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiGetDesa, apiGetProvinsi } from '@/lib/api'; // PERBAIKAN: Impor fungsi
 import Link from 'next/link';
 import { IconSearch, IconChevronDown, IconMapPin } from '@/components/icons';
+import { toast } from 'react-hot-toast';
 
 // Helper untuk mengambil data dengan aman (disimpan di sini)
 const safeGetData = (response) => {
@@ -16,14 +17,14 @@ const safeGetData = (response) => {
 export async function getServerSideProps() {
   try {
     const [desaResponse, provinsiResponse] = await Promise.all([
-      apiFetch('/desa?per_page=100'), // Ambil semua desa
+      apiGetDesa({ per_page: 100 }).catch(e => { console.error("Gagal fetch desa:", e.message); return { data: [] }; }), // Ambil semua desa
       // PERBAIKAN: Endpoint API yang benar adalah /alamat/provinsi
-      apiFetch('/alamat/provinsi')   
+      apiGetProvinsi().catch(e => { console.error("Gagal fetch provinsi:", e.message); return []; })
     ]);
 
     return {
       props: {
-        allDesa: safeGetData(desaResponse), // Ini sudah benar
+        allDesa: safeGetData(desaResponse), 
         // PERBAIKAN: Endpoint provinsi mengembalikan array langsung
         filterProvinsi: provinsiResponse || [],
       },
@@ -40,22 +41,36 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
   // const [kabupaten, setKabupaten] = useState(''); // TODO
   
   const [filteredDesa, setFilteredDesa] = useState(allDesa);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    let desa = allDesa;
+    // Filter di sisi client agar cepat, tapi lebih baik di server jika data besar
+    const filterData = async () => {
+        setIsLoading(true);
+        try {
+            // Jika filter berubah, panggil API lagi
+            const params = {
+                per_page: 100,
+            };
+            if (searchTerm) params.search = searchTerm;
+            if (provinsi) params.provinsi_id = provinsi; // API helper harus mendukung ini
 
-    if (searchTerm) {
-      desa = desa.filter(d => 
-        d.nama_desa.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+            // PERBAIKAN: Gunakan apiGetDesa untuk filter sisi server
+            const desaResponse = await apiGetDesa(params);
+            setFilteredDesa(safeGetData(desaResponse));
 
-    if (provinsi) {
-      // PERBAIKAN: Filter menggunakan `id_provinsi` dari data desa
-      desa = desa.filter(d => d.id_provinsi == provinsi);
-    }
+        } catch (error) {
+            toast.error(`Gagal memfilter desa: ${error.message}`);
+            setFilteredDesa(allDesa); // Tampilkan semua jika error
+        } finally {
+            setIsLoading(false);
+        }
+    };
     
-    setFilteredDesa(desa);
+    // Gunakan timeout sederhana untuk debounce
+    const timer = setTimeout(filterData, 300);
+    return () => clearTimeout(timer);
+
   }, [searchTerm, provinsi, allDesa]);
 
   return (
@@ -97,33 +112,37 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
       </div>
 
       {/* Daftar Desa */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {filteredDesa.length > 0 ? (
-          filteredDesa.map(d => (
-            <Link key={d.id} href={`/desa/${d.id}`}>
-              <div className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg">
-                <img
-                  src={d.foto || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
-                  alt={d.nama_desa}
-                  className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
-                  onError={(e) => (e.target.src = 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa')}
-                />
-                <div className="flex-1 overflow-hidden">
-                  <h3 className="truncate font-semibold">{d.nama_desa}</h3>
-                  <p className="mt-1 truncate text-sm text-gray-500">
-                    <IconMapPin className="mr-1 inline-block h-4 w-4" />
-                    {d.kabupaten}, {d.provinsi}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))
-        ) : (
-          <p className="col-span-full text-center text-gray-500">
-            Tidak ada desa yang cocok dengan filter Anda.
-          </p>
-        )}
-      </div>
+      {isLoading ? (
+          <LoadingSpinner />
+      ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {filteredDesa.length > 0 ? (
+              filteredDesa.map(d => (
+                <Link key={d.id} href={`/desa/${d.id}`}>
+                  <div className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg">
+                    <img
+                      src={d.foto || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
+                      alt={d.nama_desa}
+                      className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
+                      onError={(e) => (e.target.src = 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa')}
+                    />
+                    <div className="flex-1 overflow-hidden">
+                      <h3 className="truncate font-semibold">{d.nama_desa}</h3>
+                      <p className="mt-1 truncate text-sm text-gray-500">
+                        <IconMapPin className="mr-1 inline-block h-4 w-4" />
+                        {d.kabupaten}, {d.provinsi}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className="col-span-full text-center text-gray-500">
+                Tidak ada desa yang cocok dengan filter Anda.
+              </p>
+            )}
+          </div>
+      )}
     </Layout>
   );
 }

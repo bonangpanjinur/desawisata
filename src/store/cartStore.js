@@ -1,9 +1,8 @@
 /**
  * LOKASI FILE: src/store/cartStore.js
- * PERUBAHAN: 
+ * PERBAIKAN: 
  * 1. Mengembalikan ke `export const` (bukan default). Ini adalah error kritis.
- * 2. Mengganti nama state dari 'cart' menjadi 'items' agar konsisten dengan file lama,
- * TAPI sepertinya file lain (BottomNavBar) salah. Saya akan ganti ke 'cart' agar konsisten.
+ * 2. Mengganti nama state dari 'items' menjadi 'cart' agar konsisten dengan authStore.
  * 3. Menambahkan null check ( `cart?.reduce` ) di helper untuk SSR.
  * 4. Menambahkan `toast.error` pada `debouncedSyncCart` agar error
  * sinkronisasi di latar belakang terlihat oleh user.
@@ -31,7 +30,7 @@ function debounce(func, wait) {
 const debouncedSyncCart = debounce(async (cart) => {
   if (!cart) return; // Tambahan keamanan
   const { token } = useAuthStore.getState();
-  // Hanya sync jika login dan ada item
+  // Hanya sync jika login 
   if (token) { 
     try {
       console.log("Debounced sync running...", cart);
@@ -105,7 +104,7 @@ export const useCartStore = create( // PERBAIKAN: 'export const'
       },
 
       // Fungsi helper
-      // PERBAIKAN: Tambahkan 'cart?' untuk mengatasi error prerender
+      // PERBAIKAN: Tambahkan '(cart || [])' untuk mengatasi error prerender
       getTotalPrice: () => {
         const cart = get().cart;
         return (cart || []).reduce((total, item) => total + item.price * item.quantity, 0);

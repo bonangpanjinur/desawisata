@@ -1,14 +1,15 @@
 // File: src/pages/jelajah.js
-// PERUBAHAN: 
+// PERBAIKAN: 
 // 1. Menambahkan 'toast' agar error pencarian/filter tampil ke user.
 // 2. Menambahkan 'Link' dan 'DesaCard' yang hilang.
+// 3. Menggunakan apiGetKategoriProduk, apiGetDesa, apiGetKategoriWisata
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import ProductCard from '@/components/ProductCard';
 import WisataCard from '@/components/WisataCard'; // Impor WisataCard
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiGetKategoriProduk, apiGetDesa, apiGetKategoriWisata, apiGetProduk, apiGetWisata } from '@/lib/api'; // PERBAIKAN: Impor fungsi spesifik
 import { IconSearch, IconX, IconFilter, IconChevronDown, IconMapPin } from '@/components/icons';
 import Link from 'next/link'; // Impor Link
 import { toast } from 'react-hot-toast'; // Impor toast
@@ -31,9 +32,9 @@ export async function getServerSideProps() {
   // Ambil data filter (kategori & desa) dari server
   try {
     const [kategoriProdukData, desaData, kategoriWisataData] = await Promise.all([
-      apiFetch('/kategori/produk'),
-      apiFetch('/desa?per_page=100'), // Ambil daftar desa untuk filter
-      apiFetch('/kategori/wisata'), // Ambil kategori wisata
+      apiGetKategoriProduk().catch(e => { console.error("Gagal fetch kategori produk:", e.message); return []; }),
+      apiGetDesa({ per_page: 100 }).catch(e => { console.error("Gagal fetch desa:", e.message); return { data: [] }; }), // Ambil daftar desa untuk filter
+      apiGetKategoriWisata().catch(e => { console.error("Gagal fetch kategori wisata:", e.message); return []; }), // Ambil kategori wisata
     ]);
     return {
       props: {
@@ -96,32 +97,34 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        let endpoint = '/produk';
-        if (tipe === 'wisata') endpoint = '/wisata';
-        if (tipe === 'desa') endpoint = '/desa';
+        let fetchFunction;
+        if (tipe === 'wisata') fetchFunction = apiGetWisata;
+        else if (tipe === 'desa') fetchFunction = apiGetDesa;
+        else fetchFunction = apiGetProduk;
 
-        const params = new URLSearchParams();
+        const params = {};
         
         if (debouncedSearchTerm) {
           // 'search' adalah parameter yang benar untuk produk, wisata, dan desa
-          params.append('search', debouncedSearchTerm);
+          params.search = debouncedSearchTerm;
         }
         
         if (tipe !== 'desa') { // Filter kategori & desa hanya untuk produk/wisata
           if (kategori) {
-            params.append('kategori', kategori);
+            params.kategori = kategori;
           }
           if (desa) {
-            params.append('desa', desa);
+            params.desa = desa;
           }
         }
         
-        const data = await apiFetch(`${endpoint}?${params.toString()}`);
+        const data = await fetchFunction(params);
         setResults(data.data || []);
       } catch (error) {
         console.error(`Gagal fetch ${tipe}:`, error);
         // PERUBAHAN: Tampilkan error ke user
         toast.error(error.message);
+        setResults([]);
       } finally {
         setIsLoading(false);
       }

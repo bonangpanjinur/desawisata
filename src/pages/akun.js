@@ -1,5 +1,5 @@
 // src/pages/akun.js
-// PERUBAHAN: 
+// PERBAIKAN: 
 // 1. Mengubah impor default 'useAuthStore' menjadi impor bernama.
 // 2. Mengubah `toast.error("pesan.. " + error.message)` menjadi `toast.error(error.message)`.
 import { useAuthStore } from '@/store/authStore'; // <-- PERBAIKAN: Impor bernama

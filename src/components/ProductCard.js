@@ -3,6 +3,7 @@
 // 1. Mengambil gambar dari galeri jika gambar unggulan tidak ada.
 // 2. Menambahkan `unoptimized={true}` pada Next/Image untuk error 400.
 // 3. Mengakses harga variasi dengan benar.
+// 4. Menggunakan `harga_tampil` dari API.
 import Link from 'next/link';
 import Image from 'next/image';
 import { IconMapPin, IconStore } from './icons';
@@ -22,23 +23,11 @@ export default function ProductCard({ product }) {
                    || placeholderImg;
   // --- AKHIR PERBAIKAN ---
   
-  const linkUrl = `/produk/${product.slug}`; // PERBAIKAN: Ganti 'product' ke 'produk'
+  const linkUrl = `/product/${product.slug}`; // PERBAIKAN: Ganti 'product' ke 'produk'
   
-  let displayPrice = product.harga_tampil; // Gunakan harga_tampil dari API
+  // PERBAIKAN: Gunakan harga_tampil dari API (yang sudah dikalkulasi backend)
+  let displayPrice = product.harga_tampil;
   let hasVariations = product.variasi && product.variasi.length > 0;
-
-  // Fallback jika harga_tampil tidak ada
-  if (displayPrice === null || displayPrice === undefined) {
-    displayPrice = product.harga_dasar;
-    if (hasVariations) {
-      // PERBAIKAN: Akses harga variasi dari 'harga_variasi'
-      const prices = product.variasi.map(v => parseFloat(v.harga_variasi));
-      if (prices.length > 0) {
-        displayPrice = Math.min(...prices);
-      }
-    }
-  }
-
 
   return (
     <Link href={linkUrl} className="group flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl">

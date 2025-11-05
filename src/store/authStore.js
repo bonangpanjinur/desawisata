@@ -1,10 +1,11 @@
 /**
  * LOKASI FILE: src/store/authStore.js
- * PERUBAHAN:
+ * PERBAIKAN:
  * 1. Mengembalikan ke `export const` (bukan default). Ini adalah error kritis.
  * 2. Menyederhanakan block `catch` agar melemparkan error (yang sudah diproses
  * oleh interceptor di api.js) ke komponen/halaman.
  * 3. Menambahkan toast error pada `logout`.
+ * 4. Memperbaiki logika sinkronisasi keranjang.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -24,13 +25,16 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           set({ user: data.user_data, token: data.token });
 
           // Sinkronisasi Keranjang setelah login
-          const guestCart = useCartStore.getState().cart; // PERBAIKAN: Ganti 'items' ke 'cart'
+          const guestCart = useCartStore.getState().cart; // PERBAIKAN: Ambil state 'cart'
+          
           if (guestCart.length > 0) {
             console.log("Menyinkronkan keranjang guest ke server...", guestCart);
-            const syncedCart = await apiSyncMyCart(guestCart);
-            useCartStore.setState({ cart: syncedCart });
+            // Kirim guest cart, server akan merge dan mengembalikan cart terbaru
+            const syncedCart = await apiSyncMyCart(guestCart); 
+            useCartStore.setState({ cart: syncedCart }); // Update store keranjang dengan data dari server
           } else {
             console.log("Mengambil keranjang server...");
+            // Keranjang guest kosong, ambil keranjang dari server (jika ada)
             const serverCart = await apiGetMyCart();
             useCartStore.setState({ cart: serverCart });
           }
@@ -76,5 +80,3 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
     }
   )
 );
-
-// Hapus 'export default'
