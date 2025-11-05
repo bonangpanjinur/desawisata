@@ -73,7 +73,6 @@ export default function ProductDetail({ product, reviews }) {
       return selectedVariation.harga_variasi;
     }
     if (hasVariations) {
-      // Tampilkan harga minimum jika ada variasi tapi belum dipilih
       const minPrice = Math.min(...product.variasi.map(v => v.harga_variasi));
       return minPrice;
     }
@@ -90,7 +89,6 @@ export default function ProductDetail({ product, reviews }) {
             {/* Kolom Gambar */}
             <div className="md:w-1/2">
               <img src={mainImage} alt={product.nama_produk} className="w-full h-64 md:h-[450px] object-cover" onError={(e) => (e.target.src = 'https://placehold.co/600x600/f4f4f5/a1a1aa?text=Produk')}/>
-              {/* TODO: Galeri foto thumbnail */}
             </div>
 
             {/* Kolom Info */}
@@ -105,7 +103,6 @@ export default function ProductDetail({ product, reviews }) {
                   <span className="ml-2 text-gray-500">({product.rating.count} ulasan)</span>
                 </div>
                 
-                {/* Harga */}
                 <div className="text-3xl font-bold text-primary mb-4">
                   {displayPrice !== null ? (
                     <>
@@ -117,7 +114,6 @@ export default function ProductDetail({ product, reviews }) {
                   )}
                 </div>
 
-                {/* Variasi */}
                 {hasVariations && (
                   <div className="mb-4">
                     <label htmlFor="variation" className="block text-sm font-medium text-gray-700 mb-1">Pilih Variasi:</label>
@@ -137,7 +133,6 @@ export default function ProductDetail({ product, reviews }) {
                   </div>
                 )}
 
-                {/* Kuantitas */}
                 <div className="mb-4">
                   <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">Kuantitas:</label>
                   <input
@@ -151,7 +146,6 @@ export default function ProductDetail({ product, reviews }) {
                 </div>
               </div>
 
-              {/* Tombol Aksi */}
               <div className="mt-6">
                 <button
                   onClick={handleAddToCart}
@@ -169,7 +163,6 @@ export default function ProductDetail({ product, reviews }) {
           </div>
         </div>
 
-        {/* Deskripsi & Ulasan */}
         <div className="bg-white rounded-lg shadow-lg mt-6 p-6">
           <h2 className="text-2xl font-semibold mb-4">Deskripsi Produk</h2>
           <div
@@ -206,7 +199,6 @@ export default function ProductDetail({ product, reviews }) {
   );
 }
 
-// Fungsi GetStaticPaths dan GetStaticProps
 export async function getStaticPaths() {
   let products = [];
   try {

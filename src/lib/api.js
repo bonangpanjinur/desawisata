@@ -1,17 +1,17 @@
 /**
  * LOKASI FILE: src/lib/api.js
- * PERBAIKAN:
- * 1. Menambahkan 'export' di depan 'apiFetch' dan 'apiUploadFile'.
- * 2. Menambahkan fungsi 'apiGetReviews' dan 'apiGetProdukDetail' (by slug) yang hilang.
- * 3. Menambahkan INTERCEPTOR RESPON ERROR (BARU) untuk mem-parsing pesan error
- * spesifik dari server sebelum error tersebut ditangkap oleh komponen.
- * INI ADALAH PERBAIKAN UTAMA untuk "tidak menampilkan apa-apa" karena
- * sekarang error dari backend akan muncul sebagai toast.
+ * PERBAIKAN UTAMA:
+ * 1. MENGGANTI 'dwl/v1' menjadi 'dw/v1' di BASE_URL. Ini adalah penyebab 404.
+ * 2. Menambahkan INTERCEPTOR RESPON ERROR untuk menampilkan pesan error dari backend
+ * sebagai toast, alih-alih hanya menampilkan layar kosong.
+ * 3. Menambahkan 'export' yang hilang.
+ * 4. Menambahkan fungsi-fungsi API yang hilang (e.g., apiGetPublicSettings, apiGetReviews, dll).
  */
 import axios from 'axios';
-import { useAuthStore } from '@/store/authStore'; // PERBAIKAN: Impor bernama
-import { toast } from 'react-hot-toast'; // Impor toast untuk error global
+import { useAuthStore } from '@/store/authStore';
+import { toast } from 'react-hot-toast';
 
+// PERBAIKAN: Typo 'dwl/v1' diubah menjadi 'dw/v1'
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/dw/v1';
 
 export const apiFetch = axios.create({ // PERBAIKAN: export
@@ -51,10 +51,8 @@ apiFetch.interceptors.response.use(
       } else if (data && data.error) {
         specificMessage = data.error;
       } else if (typeof data === 'string' && data.includes('<p>')) {
-        // Jika backend mengirim halaman error HTML
          specificMessage = "Terjadi error kritis di server (500).";
       } else if (error.response.statusText) {
-        // Fallback ke status text
         specificMessage = `${error.response.status}: ${error.response.statusText}`;
       }
       
@@ -76,7 +74,6 @@ apiFetch.interceptors.response.use(
 
 // --- OTENTIKASI ---
 export const apiLogin = async (username, password) => {
-  // .data sudah di-handle oleh interceptor
   const data = await apiFetch.post('/auth/login', { username, password });
   return data;
 };
@@ -122,7 +119,7 @@ export const apiGetProduk = async (params) => {
   return data;
 };
 
-// PERBAIKAN: Fungsi ini hilang di file Anda, dibutuhkan oleh [slug].js
+// PERBAIKAN: Fungsi ini hilang
 export const apiGetProdukDetail = async (slug) => {
   const data = await apiFetch.get(`/produk/slug/${slug}`);
   return data;
@@ -143,12 +140,13 @@ export const apiGetTokoDetail = async (id, params) => {
   return data;
 };
 
+// PERBAIKAN: Fungsi ini hilang
 export const apiGetPublicSettings = async () => {
   const data = await apiFetch.get('/settings');
   return data;
 };
 
-// --- FUNGSI BARU YANG HILANG ---
+// PERBAIKAN: Fungsi ini hilang
 export const apiGetReviews = async (target_type, target_id, params) => {
   const data = await apiFetch.get(`/reviews/${target_type}/${target_id}`, { params });
   return data;

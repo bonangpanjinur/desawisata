@@ -1,17 +1,15 @@
 /**
  * LOKASI FILE: src/store/authStore.js
  * PERBAIKAN:
- * 1. Mengembalikan ke `export const` (bukan default). Ini adalah error kritis.
- * 2. Menyederhanakan block `catch` agar melemparkan error (yang sudah diproses
- * oleh interceptor di api.js) ke komponen/halaman.
- * 3. Menambahkan toast error pada `logout`.
- * 4. Memperbaiki logika sinkronisasi keranjang.
+ * 1. Mengubah `export default` menjadi `export const`.
+ * 2. Menyederhanakan `catch` agar error dari interceptor bisa sampai ke halaman.
+ * 3. Memperbaiki logika sinkronisasi keranjang.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { apiLogin, apiRegister, apiSyncMyCart, apiClearMyCart, apiGetMyCart } from '@/lib/api';
-import { useCartStore } from './cartStore'; // Impor bernama
-import { toast } from 'react-hot-toast'; // Impor toast
+import { useCartStore } from './cartStore'; // PERBAIKAN: Impor bernama
+import { toast } from 'react-hot-toast'; 
 
 export const useAuthStore = create( // PERBAIKAN: 'export const'
   persist(
@@ -40,7 +38,7 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           }
           return data; // Kembalikan data agar komponen tahu login sukses
         } catch (error) {
-          // PERUBAHAN: Sederhanakan. Lemparkan error agar ditangkap oleh halaman.
+          // PERBAIKAN: Lemparkan error agar ditangkap oleh halaman.
           console.error("Login failed in authStore:", error);
           throw error;
         }
@@ -51,7 +49,7 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           const data = await apiRegister(username, email, password, nama_lengkap);
           return data;
         } catch (error) {
-          // PERUBAHAN: Sederhanakan. Lemparkan error agar ditangkap oleh halaman.
+          // PERBAIKAN: Lemparkan error agar ditangkap oleh halaman.
           console.error("Register failed in authStore:", error);
           throw error;
         }
@@ -63,7 +61,7 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           await apiClearMyCart();
         } catch (error) {
           console.error("Gagal membersihkan keranjang server saat logout:", error);
-          // PERUBAHAN: Tampilkan error ke user
+          // PERBAIKAN: Tampilkan error ke user
           toast.error("Gagal membersihkan keranjang server saat logout.");
         } finally {
           // Selalu logout di client

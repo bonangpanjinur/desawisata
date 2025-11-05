@@ -4,9 +4,7 @@
 
 import '@/styles/globals.css';
 import { Toaster } from 'react-hot-toast';
-// PERBAIKAN: Impor store tidak diperlukan di sini
-// import { useAuthStore } from '@/store/authStore';
-// import { useCartStore } from '@/store/cartStore';
+// Impor store tidak diperlukan di sini
 // import { useEffect } from 'react';
 
 function MyApp({ Component, pageProps }) {

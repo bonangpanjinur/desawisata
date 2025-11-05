@@ -2,6 +2,7 @@
 // PERBAIKAN: 
 // 1. Destructuring 'cart' (nama state yang benar) dari store, bukan 'items'.
 // 2. Memastikan (cart || []).length digunakan untuk pengecekan.
+// 3. Menambahkan `unoptimized={true}` pada Image.
 
 import Layout from '@/components/Layout';
 import { useCartStore } from '@/store/cartStore'; // PERBAIKAN: Impor bernama
@@ -16,7 +17,6 @@ export default function KeranjangPage() {
   // PERBAIKAN: Destructuring 'cart' (nama state yang benar di cartStore.js)
   const { cart, getTotalPrice, removeItem, updateQuantity } = useCartStore();
   
-  // Panggil selector untuk mendapatkan total
   const total = getTotalPrice(); 
 
   // Kelompokkan item berdasarkan toko
@@ -55,7 +55,6 @@ export default function KeranjangPage() {
                 <h2 className="border-b p-4 text-lg font-semibold">{tokoData.nama_toko}</h2>
                 <div className="divide-y">
                   {tokoData.items.map(item => (
-                    // Gunakan item.id (composite key) sebagai key
                     <div key={item.id} className="flex gap-4 p-4">
                       <Image
                         src={item.image || placeholderImg}
@@ -76,12 +75,10 @@ export default function KeranjangPage() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end justify-between">
-                        {/* Gunakan item.id untuk removeItem */}
                         <button onClick={() => removeItem(item.id)} className="text-gray-400 hover:text-red-500">
                           <IconX className="h-5 w-5" />
                         </button>
                         <div className="flex items-center rounded-lg border">
-                          {/* Gunakan updateQuantity */}
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             className="p-2 disabled:text-gray-300"
@@ -90,7 +87,6 @@ export default function KeranjangPage() {
                             <IconMinus className="h-4 w-4" />
                           </button>
                           <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                          {/* Gunakan updateQuantity */}
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="p-2 disabled:text-gray-300"
@@ -112,7 +108,6 @@ export default function KeranjangPage() {
               <h2 className="text-xl font-semibold border-b pb-4">Ringkasan Belanja</h2>
               <div className="flex justify-between mt-4 text-lg">
                 <span>Total Harga Produk</span>
-                {/* Gunakan 'total' (dari getTotalPrice) */}
                 <span className="font-bold">{formatCurrency(total)}</span>
               </div>
               <p className="text-sm text-gray-500 mt-2">Ongkos kirim akan dihitung saat checkout.</p>

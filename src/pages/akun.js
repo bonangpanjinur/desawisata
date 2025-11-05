@@ -2,34 +2,29 @@
 // PERBAIKAN: 
 // 1. Mengubah impor default 'useAuthStore' menjadi impor bernama.
 // 2. Mengubah `toast.error("pesan.. " + error.message)` menjadi `toast.error(error.message)`.
+// 3. Mengimpor 'apiRegister' yang benar.
+// 4. Mengimpor ikon 'Eye' dan 'EyeOff' yang hilang.
 import { useAuthStore } from '@/store/authStore'; // <-- PERBAIKAN: Impor bernama
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-// PERBAIKAN: Impor apiRegister, bukan apiFetch
-import { apiRegister, apiUpdateProfile } from '@/lib/api'; 
+import { apiRegister, apiUpdateProfile } from '@/lib/api'; // PERBAIKAN: Impor apiRegister
 import { toast } from 'react-hot-toast'; 
 import LoadingSpinner from '@/components/LoadingSpinner'; 
-// PERBAIKAN: Impor ikon yang hilang
-import { IconEye, IconEyeOff } from '@/components/icons'; 
+import { IconEye, IconEyeOff } from '@/components/icons'; // PERBAIKAN: Impor ikon
 
 export default function Akun() {
   const router = useRouter();
-  // PERBAIKAN: 'useAuthStore' sekarang adalah fungsi yang benar
-  const { user, login, logout } = useAuthStore();
+  const { user, login, logout } = useAuthStore(); // PERBAIKAN: Panggil sebagai fungsi
 
-  // State untuk form
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // PERBAIKAN: State untuk lihat password
+  const [showPassword, setShowPassword] = useState(false); 
   const [email, setEmail] = useState('');
   const [namaLengkap, setNamaLengkap] = useState('');
-
-  const [loading, setLoading] = useState(false);
-
-  // State untuk edit profil (jika sudah login)
+  const [loading, setLoading] = useState(false); 
   const [editData, setEditData] = useState({
     displayName: '',
     email: '',
@@ -52,18 +47,15 @@ export default function Akun() {
 
     setLoading(true); 
     try {
-      // Fungsi 'login' dari authStore sudah di-wrap interceptor
       const data = await login(username, password); 
       if (data) {
         toast.success('Login berhasil!');
-        // Cek jika ada redirect URL
         const redirectPath = router.query.redirect || '/';
         router.push(redirectPath);
       }
-      // Error sudah ditangani oleh authStore/interceptor
     } catch (error) {
       console.error(error);
-      // PERUBAHAN: Tampilkan pesan error spesifik dari server
+      // PERBAIKAN: Tampilkan pesan error spesifik dari interceptor
       toast.error(error.message);
     } finally {
       setLoading(false); 
@@ -76,8 +68,7 @@ export default function Akun() {
 
     setLoading(true);
     try {
-      // PERBAIKAN: Panggil apiRegister
-      await apiRegister(username, email, password, namaLengkap);
+      await apiRegister(username, email, password, namaLengkap); // PERBAIKAN: Panggil apiRegister
       
       toast.success('Registrasi berhasil! Silakan login.');
       setIsLogin(true); 
@@ -88,7 +79,7 @@ export default function Akun() {
 
     } catch (error) {
       console.error(error);
-      // PERUBAHAN: Tampilkan pesan error spesifik dari server
+      // PERBAIKAN: Tampilkan pesan error spesifik
       toast.error(error.message);
     } finally {
       setLoading(false);
@@ -98,22 +89,19 @@ export default function Akun() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     if (loading) return;
-
     setLoading(true);
     toast.loading('Menyimpan profil...'); 
 
     try {
       // TODO: Implementasi apiUpdateProfile di api.js
       // const updatedUser = await apiUpdateProfile(editData);
-      
       await new Promise(res => setTimeout(res, 1000)); 
-      
       toast.dismiss();
       toast.success('Fitur update profil sedang dalam pengembangan.');
     } catch (error) {
       toast.dismiss();
       console.error(error);
-      // PERUBAHAN: Tampilkan pesan error spesifik dari server
+      // PERBAIKAN: Tampilkan pesan error spesifik
       toast.error(error.message);
     } finally {
       setLoading(false);

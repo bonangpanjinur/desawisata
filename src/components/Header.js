@@ -1,16 +1,15 @@
 // src/components/Header.js
-// PERBAIKAN: Menerapkan logic yang sama dengan BottomNavBar
-// untuk mencegah error SSR.
-// Gunakan useState dan useEffect.
+// PERBAIKAN: Menerapkan logic useState/useEffect untuk mencegah error SSR
+// pada hitungan keranjang.
+// PERBAIKAN: Menerima prop 'title' dari Layout.
 
-// PERBAIKAN: Import useState dan useEffect
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; // PERBAIKAN: Import
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { IconSearch, IconCart, IconChevronLeft } from './icons';
 import { useCartStore } from '@/store/cartStore';
 
-export default function Header({ title }) { // PERBAIKAN: Terima 'title' dari Layout
+export default function Header({ title }) { // PERBAIKAN: Terima 'title'
   const router = useRouter();
   
   // PERBAIKAN: Ambil state 'cart' dari store
@@ -30,7 +29,6 @@ export default function Header({ title }) { // PERBAIKAN: Terima 'title' dari La
   
   // Tampilkan header simpel jika bukan di beranda
   if (!isHomePage) {
-    // Dapatkan judul halaman dari path
     let pageTitle = "Kembali";
     if (router.pathname.startsWith('/product/')) pageTitle = "Detail Produk";
     if (router.pathname.startsWith('/wisata/')) pageTitle = "Detail Wisata";
@@ -48,11 +46,9 @@ export default function Header({ title }) { // PERBAIKAN: Terima 'title' dari La
           <button onClick={() => router.back()} className="p-2">
             <IconChevronLeft className="h-6 w-6" />
           </button>
-          {/* PERBAIKAN: Tampilkan judul halaman */}
           <span className="text-lg font-semibold truncate">
             {pageTitle}
           </span>
-          {/* Placeholder agar judul di tengah */}
           <div className="w-8"></div> 
         </div>
       </header>
@@ -69,12 +65,10 @@ export default function Header({ title }) { // PERBAIKAN: Terima 'title' dari La
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Search Bar */}
           <Link href="/jelajah" className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2">
               <IconSearch className="h-5 w-5 text-gray-500" />
           </Link>
 
-          {/* Ikon Keranjang */}
           <Link href="/keranjang" className="relative p-2">
               <IconCart className="h-6 w-6" />
               {/* PERBAIKAN: Gunakan state cartItemCount */}

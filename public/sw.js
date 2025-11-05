@@ -1,6 +1,5 @@
 // public/sw.js
-// Ini adalah service worker dasar untuk PWA.
-// Anda bisa menggunakan library yang lebih canggih seperti workbox-nextjs nanti.
+// PERBAIKAN: Menghapus ikon lokal yang tidak ada dari cache.
 
 const CACHE_NAME = 'sadesa-cache-v1';
 const urlsToCache = [
@@ -26,27 +25,20 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Hanya tangani request GET
   if (event.request.method !== 'GET') {
     return;
   }
-
-  // Strategi Cache-First untuk aset
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
         if (response) {
           return response; // Ambil dari cache
         }
-        // Jika tidak ada di cache, ambil dari network
         return fetch(event.request).then(
           (response) => {
-            // Cek jika response valid
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-
-            // Clone response untuk disimpan di cache
             const responseToCache = response.clone();
             caches.open(CACHE_NAME)
               .then((cache) => {

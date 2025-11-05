@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { IconSearch, IconChevronDown, IconMapPin } from '@/components/icons';
 import { toast } from 'react-hot-toast';
 
-// Helper untuk mengambil data dengan aman (disimpan di sini)
+// Helper untuk mengambil data dengan aman
 const safeGetData = (response) => {
   if (Array.isArray(response)) return response;
   return response?.data || [];
@@ -17,7 +17,7 @@ const safeGetData = (response) => {
 export async function getServerSideProps() {
   try {
     const [desaResponse, provinsiResponse] = await Promise.all([
-      apiGetDesa({ per_page: 100 }).catch(e => { console.error("Gagal fetch desa:", e.message); return { data: [] }; }), // Ambil semua desa
+      apiGetDesa({ per_page: 100 }).catch(e => { console.error("Gagal fetch desa:", e.message); return { data: [] }; }), 
       // PERBAIKAN: Endpoint API yang benar adalah /alamat/provinsi
       apiGetProvinsi().catch(e => { console.error("Gagal fetch provinsi:", e.message); return []; })
     ]);
@@ -38,17 +38,13 @@ export async function getServerSideProps() {
 export default function DesaIndexPage({ allDesa, filterProvinsi }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [provinsi, setProvinsi] = useState('');
-  // const [kabupaten, setKabupaten] = useState(''); // TODO
-  
   const [filteredDesa, setFilteredDesa] = useState(allDesa);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Filter di sisi client agar cepat, tapi lebih baik di server jika data besar
     const filterData = async () => {
         setIsLoading(true);
         try {
-            // Jika filter berubah, panggil API lagi
             const params = {
                 per_page: 100,
             };
@@ -67,7 +63,6 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
         }
     };
     
-    // Gunakan timeout sederhana untuk debounce
     const timer = setTimeout(filterData, 300);
     return () => clearTimeout(timer);
 
@@ -79,7 +74,6 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
 
       {/* Search & Filter */}
       <div className="sticky top-16 z-30 mb-6 space-y-4 bg-background/80 py-4 backdrop-blur-sm">
-        {/* Search Bar */}
         <div className="relative">
           <input
             type="text"
@@ -91,7 +85,6 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
           <IconSearch className="absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400" />
         </div>
         
-        {/* Filter Daerah */}
         <div className="flex flex-col gap-2 md:flex-row">
           <div className="relative flex-1">
             <select
@@ -107,11 +100,9 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
             </select>
             <IconChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           </div>
-          {/* TODO: Tambahkan filter kabupaten di sini */}
         </div>
       </div>
 
-      {/* Daftar Desa */}
       {isLoading ? (
           <LoadingSpinner />
       ) : (

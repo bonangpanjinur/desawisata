@@ -1,7 +1,6 @@
 // File: src/pages/index.js
-// PERBAIKAN: Memastikan data yang diterima dari getServerSideProps
-// di-passing dengan benar dan ditampilkan.
-// PERBAIKAN: Menggunakan apiGetProduk, apiGetWisata, dll.
+// PERBAIKAN: Menggunakan fungsi API yang spesifik dan memastikan
+// data .data di-passing dengan benar.
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -12,9 +11,8 @@ import KategoriGrid from '@/components/KategoriGrid';
 // PERBAIKAN: Impor fungsi API yang spesifik
 import { apiGetBanners, apiGetProduk, apiGetWisata, apiGetKategoriProduk } from '@/lib/api';
 import Link from 'next/link';
-import { IconArrowUpRight, IconMapPin, IconStore, IconSearch } from '@/components/icons';
+import { IconArrowUpRight } from '@/components/icons';
 
-// Fungsi ini berjalan di server saat halaman diminta
 export async function getServerSideProps() {
   try {
     // Ambil data secara paralel
@@ -36,6 +34,7 @@ export async function getServerSideProps() {
     };
   } catch (error) {
     console.error("Error global di getServerSideProps:", error);
+    // PERBAIKAN: Pastikan selalu mengembalikan props yang benar
     return { props: { banners: [], featuredProducts: [], featuredWisata: [], kategori: [] } };
   }
 }
@@ -45,13 +44,9 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, ka
 
   return (
     <Layout>
-      {/* Bagian Banner/Hero - Ganti dengan Carousel */}
       <BannerCarousel banners={banners} />
-
-      {/* Kategori (BARU) */}
       <KategoriGrid kategori={kategori} />
       
-      {/* Bagian Wisata Unggulan */}
       <section className="mb-10">
         <div className="mb-4 flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-bold">Wisata Terbaru</h2>
@@ -60,7 +55,6 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, ka
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {/* FOKUS: Memastikan data muncul di sini */}
           {featuredWisata.length > 0 ? (
             featuredWisata.map(wisata => (
               <WisataCard key={wisata.id} wisata={wisata} />
@@ -71,7 +65,6 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, ka
         </div>
       </section>
 
-      {/* Bagian Produk Unggulan */}
       <section className="mb-10">
         <div className="mb-4 flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-bold">Produk Terbaru</h2>
@@ -80,7 +73,6 @@ export default function HomePage({ banners, featuredProducts, featuredWisata, ka
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {/* FOKUS: Memastikan data muncul di sini */}
           {featuredProducts.length > 0 ? (
             featuredProducts.map(product => (
               <ProductCard key={product.id} product={product} />

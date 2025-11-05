@@ -33,7 +33,6 @@ export default function WisataDetailPage({ wisata }) {
   // PERBAIKAN: Akses data yang benar dari struktur API
   const namaDesa = wisata.desa?.nama_desa;
   const idDesa = wisata.desa?.id;
-  // Gunakan alamat lengkap, atau kabupaten desa sebagai fallback
   const alamatLengkap = wisata.lokasi?.alamat || (namaDesa ? `Desa ${namaDesa}` : 'Lokasi');
   const hargaTiket = wisata.info?.harga_tiket || 0;
   const koordinat = wisata.lokasi?.koordinat; // Ini adalah string "lat,lng"
@@ -41,28 +40,25 @@ export default function WisataDetailPage({ wisata }) {
   return (
     <Layout>
       <div className="rounded-lg bg-white p-4 shadow-lg md:p-6">
-        {/* Gambar Wisata */}
         <div className="relative mb-4 h-64 w-full overflow-hidden rounded-lg bg-gray-100 md:h-96">
           <Image
             src={imageUrl}
             alt={wisata.nama_wisata}
             layout="fill"
             objectFit="cover"
+            unoptimized={true} // PERBAIKAN: Tambahkan unoptimized
             onError={(e) => (e.target.src = placeholderImg)}
           />
         </div>
 
-        {/* Info Desa (jika ada) */}
         {idDesa && namaDesa && (
           <Link href={`/desa/${idDesa}`}>
             <div className="mb-4 flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50">
-              {/* PERBAIKAN: Hapus foto_desa karena tidak ada di API, gunakan ikon */}
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
                 <IconMapPin className="h-6 w-6" />
               </div>
               <div>
                 <h3 className="font-semibold text-primary">{namaDesa}</h3>
-                {/* PERBAIKAN: Tampilkan alamat */}
                 <p className="flex items-center gap-1 text-sm text-gray-500">
                   {alamatLengkap}
                 </p>
@@ -71,19 +67,14 @@ export default function WisataDetailPage({ wisata }) {
           </Link>
         )}
 
-        {/* Info Wisata */}
         <h1 className="mb-2 text-3xl font-bold">{wisata.nama_wisata}</h1>
         
-        {/* Lokasi */}
         <div className="mb-4 flex items-center gap-2 text-gray-600">
             <IconMapPin className="h-5 w-5" />
-            {/* PERBAIKAN: Tampilkan alamat */}
             <span className="font-semibold">{alamatLengkap}</span>
         </div>
 
-        {/* Harga Tiket */}
         <p className="mb-4 text-3xl font-bold text-primary">
-          {/* PERBAIKAN: Cek harga tiket yang benar dan formatnya */}
           {typeof hargaTiket === 'number' && hargaTiket > 0 
             ? `Rp ${hargaTiket.toLocaleString('id-ID')}`
             : (typeof hargaTiket === 'string' ? hargaTiket : 'Gratis')
@@ -91,13 +82,7 @@ export default function WisataDetailPage({ wisata }) {
           {typeof hargaTiket === 'number' && <span className="text-base font-normal text-gray-500"> / orang</span>}
         </p>
         
-        {/* Tombol Aksi */}
         <div className="flex gap-4 mb-6">
-            {/* <button
-                className="flex-1 rounded-lg bg-primary py-3 px-6 text-lg font-semibold text-white shadow-lg transition-colors hover:bg-primary-dark"
-            >
-                Pesan Tiket
-            </button> */}
             {koordinat && (
               <a
                   // PERBAIKAN: Gunakan koordinat string "lat,lng" langsung
@@ -111,7 +96,6 @@ export default function WisataDetailPage({ wisata }) {
             )}
         </div>
 
-        {/* Deskripsi */}
         <div className="prose prose-sm mt-8 max-w-none border-t pt-6">
           <h3 className="font-semibold">Deskripsi Wisata</h3>
           <div dangerouslySetInnerHTML={{ __html: wisata.deskripsi || '<p>Tidak ada deskripsi.</p>' }} />

@@ -29,12 +29,11 @@ function useDebounce(value, delay) {
 }
 
 export async function getServerSideProps() {
-  // Ambil data filter (kategori & desa) dari server
   try {
     const [kategoriProdukData, desaData, kategoriWisataData] = await Promise.all([
       apiGetKategoriProduk().catch(e => { console.error("Gagal fetch kategori produk:", e.message); return []; }),
-      apiGetDesa({ per_page: 100 }).catch(e => { console.error("Gagal fetch desa:", e.message); return { data: [] }; }), // Ambil daftar desa untuk filter
-      apiGetKategoriWisata().catch(e => { console.error("Gagal fetch kategori wisata:", e.message); return []; }), // Ambil kategori wisata
+      apiGetDesa({ per_page: 100 }).catch(e => { console.error("Gagal fetch desa:", e.message); return { data: [] }; }), 
+      apiGetKategoriWisata().catch(e => { console.error("Gagal fetch kategori wisata:", e.message); return []; }),
     ]);
     return {
       props: {
@@ -86,7 +85,6 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
   
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const kategoriList = tipe === 'produk' ? filterKategoriProduk : filterKategoriWisata;
-  const showDesaFilter = tipe !== 'desa'; // Filter desa tidak relevan saat mencari desa
 
   useEffect(() => {
     // Reset kategori jika tipe berubah
@@ -105,11 +103,10 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
         const params = {};
         
         if (debouncedSearchTerm) {
-          // 'search' adalah parameter yang benar untuk produk, wisata, dan desa
           params.search = debouncedSearchTerm;
         }
         
-        if (tipe !== 'desa') { // Filter kategori & desa hanya untuk produk/wisata
+        if (tipe !== 'desa') { 
           if (kategori) {
             params.kategori = kategori;
           }
@@ -122,7 +119,7 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
         setResults(data.data || []);
       } catch (error) {
         console.error(`Gagal fetch ${tipe}:`, error);
-        // PERUBAHAN: Tampilkan error ke user
+        // PERBAIKAN: Tampilkan error ke user
         toast.error(error.message);
         setResults([]);
       } finally {

@@ -1,9 +1,9 @@
 // src/pages/desa/[id].js
-// PERBAIKAN: Mengganti `desa.banner` menjadi `desa.foto` sebagai fallback
+// PERBAIKAN: Mengganti `desa.banner` menjadi `desa.foto`
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ProductCard from '@/components/ProductCard';
-import WisataCard from '@/components/WisataCard'; // Gunakan WisataCard baru
+import WisataCard from '@/components/WisataCard'; 
 import { apiFetch } from '@/lib/api';
 import { IconMapPin } from '@/components/icons';
 import { useRouter } from 'next/router';
@@ -38,7 +38,6 @@ export default function DesaDetailPage({ desa, products, wisata }) {
 
   return (
     <Layout>
-      {/* Header Desa */}
       <div className="mb-6 overflow-hidden rounded-lg bg-white shadow-lg">
         <div className="h-32 bg-gray-200 md:h-48">
           <img
@@ -68,7 +67,6 @@ export default function DesaDetailPage({ desa, products, wisata }) {
         </div>
       </div>
 
-      {/* Wisata Unggulan Desa */}
       <section className="mb-8">
         <h2 className="mb-4 text-xl font-bold">Wisata di {desa.nama_desa}</h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -84,7 +82,6 @@ export default function DesaDetailPage({ desa, products, wisata }) {
         </div>
       </section>
 
-      {/* Produk Unggulan Desa */}
       <section>
         <h2 className="mb-4 text-xl font-bold">Produk dari {desa.nama_desa}</h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">

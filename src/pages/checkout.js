@@ -1,7 +1,7 @@
 // src/pages/checkout.js
-// PERUBAHAN: 
-// 1. Mengubah impor default 'useCartStore' dan 'useAuthStore' menjadi impor bernama.
-// 2. Mengubah `toast.error(\`...\${err.message}\`)` menjadi `toast.error(err.message)`.
+// PERBAIKAN: 
+// 1. Mengubah impor default store menjadi impor bernama.
+// 2. Mengubah format toast error.
 import { useCartStore } from '@/store/cartStore'; // <-- PERBAIKAN: Impor bernama
 import { useAuthStore } from '@/store/authStore'; // <-- PERBAIKAN: Impor bernama
 
@@ -15,7 +15,6 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  // PERBAIKAN: 'useCartStore' dan 'useAuthStore' sekarang adalah fungsi
   const { cart, getTotalPrice, clearCart, getCartGroupedBySeller } = useCartStore();
   const { user, token } = useAuthStore();
   
@@ -28,7 +27,6 @@ export default function CheckoutPage() {
   const [loadingShipping, setLoadingShipping] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
 
-  // PERBAIKAN: Panggil getCartGroupedBySeller sebagai fungsi
   const groupedCart = useMemo(() => getCartGroupedBySeller(), [cart, getCartGroupedBySeller]);
 
   // 1. Redirect jika belum login atau keranjang kosong
@@ -60,7 +58,7 @@ export default function CheckoutPage() {
           }
         } catch (err) {
           console.error("Gagal memuat alamat:", err);
-          // PERUBAHAN: Tampilkan pesan error spesifik
+          // PERBAIKAN: Tampilkan pesan error spesifik
           toast.error(err.message);
         } finally {
           setLoadingAddress(false);
@@ -101,7 +99,7 @@ export default function CheckoutPage() {
 
       } catch (err) {
         console.error("Gagal hitung ongkir:", err);
-        // PERUBAHAN: Tampilkan pesan error spesifik
+        // PERBAIKAN: Tampilkan pesan error spesifik
         toast.error(err.message);
         setShippingOptions({}); 
       } finally {
@@ -117,7 +115,7 @@ export default function CheckoutPage() {
     let totalShipping = 0;
     const choices = {};
     const sellerIds = Object.keys(groupedCart);
-    const productTotal = getTotalPrice(); // PERBAIKAN: Panggil sebagai fungsi
+    const productTotal = getTotalPrice(); 
 
     if (sellerIds.length === 0 || Object.keys(shippingOptions).length === 0) {
       return { totalShipping: 0, totalGrand: productTotal, sellerShippingChoices: {} };
@@ -156,9 +154,7 @@ export default function CheckoutPage() {
   // 5. Cek kesiapan order
   const isOrderReady = () => {
     if (!selectedAlamat || loadingAddress || loadingShipping || loadingOrder) return false;
-    // Cek jika cart ada tapi pilihan ongkir belum ada
     if (cart.length > 0 && Object.keys(sellerShippingChoices).length === 0) return false;
-    // Cek jika ada seller yang tidak punya opsi pengiriman
     return Object.values(sellerShippingChoices).every(choice => choice.metode !== 'tidak_tersedia');
   };
 
@@ -195,7 +191,7 @@ export default function CheckoutPage() {
 
     } catch (err) {
       console.error("Gagal membuat pesanan:", err);
-      // PERUBAHAN: Tampilkan pesan error spesifik
+      // PERBAIKAN: Tampilkan pesan error spesifik
       toast.error(err.message);
       setLoadingOrder(false); 
     } 
@@ -253,7 +249,7 @@ export default function CheckoutPage() {
                                   name={`shipping_${sellerId}`} 
                                   value={opt.metode}
                                   checked={selectedChoice?.metode === opt.metode}
-                                  readOnly // PERBAIKAN: Gunakan readOnly
+                                  readOnly // Gunakan readOnly
                                   disabled // Nonaktifkan pilihan manual
                                   className="mr-2"
                                 />

@@ -1,27 +1,23 @@
 // src/components/Layout.js
 // PERBAIKAN: Mengirim 'title' ke Header
-// PERBAIKAN: Menambahkan 'apiGetPublicSettings' ke api.js dan memanggilnya
+// PERBAIKAN: Memanggil 'apiGetPublicSettings' yang baru dibuat
 import { useEffect, useState } from 'react';
-import { apiGetPublicSettings } from '@/lib/api'; // PERBAIKAN: Ganti apiFetch ke apiGetPublicSettings
+import { apiGetPublicSettings } from '@/lib/api'; // PERBAIKAN: Impor fungsi yang benar
 import Header from './Header';
 import BottomNavBar from './BottomNavBar';
 
 export default function Layout({ children }) {
-  // State untuk menyimpan nama website dari API
   const [websiteTitle, setWebsiteTitle] = useState('Sadesa.site'); // Default title
 
   useEffect(() => {
-    // Fungsi ini memanggil endpoint /settings
-    // Pastikan endpoint ini ada di backend (api-public.php)
     const fetchSettings = async () => {
       try {
         const settings = await apiGetPublicSettings(); // PERBAIKAN: Panggil fungsi yang benar
-        // Terapkan warna utama ke CSS variables di :root
+        
         if (settings.warna_utama) {
           document.documentElement.style.setProperty('--color-primary', settings.warna_utama);
-          // TODO: Hitung warna dark (jika diperlukan)
+          // TODO: Hitung warna dark
         }
-        // Simpan nama website
         if (settings.nama_website) {
           setWebsiteTitle(settings.nama_website);
         }

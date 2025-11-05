@@ -1,8 +1,8 @@
 /**
  * LOKASI FILE: src/pages/pesanan/[id].js
- * PERUBAHAN:
- * 1. Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail' (sesuai api.js).
- * 2. Mengubah `toast.error("...")` menjadi `toast.error(error.message)`.
+ * PERBAIKAN:
+ * 1. Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail'.
+ * 2. Mengubah format `toast.error`.
  * 3. Mengubah impor authStore menjadi impor bernama.
  */
 import { useEffect, useState } from 'react';
@@ -37,7 +37,7 @@ export default function PesananDetail() {
           setOrder(data);
         } catch (error) {
           console.error('Gagal mengambil detail pesanan:', error);
-          // PERUBAHAN: Tampilkan pesan error spesifik
+          // PERBAIKAN: Tampilkan pesan error spesifik
           toast.error(error.message);
           router.push('/akun?tab=pesanan');
         } finally {
@@ -90,7 +90,7 @@ export default function PesananDetail() {
     } catch (error) {
       console.error('Gagal konfirmasi pembayaran:', error);
       toast.dismiss();
-      // PERUBAHAN: Tampilkan pesan error spesifik
+      // PERBAIKAN: Tampilkan pesan error spesifik
       toast.error(error.message);
     } finally {
       setUploading(false);
@@ -122,7 +122,6 @@ export default function PesananDetail() {
             <p className="text-xl font-bold mt-2">Total: {formatCurrency(order.total_transaksi)}</p>
           </div>
 
-          {/* Instruksi Pembayaran (jika menunggu) */}
           {isPaymentPending && (
             <div className="border-t pt-4 mt-4">
               <h2 className="text-lg font-semibold mb-2">Instruksi Pembayaran</h2>
@@ -153,7 +152,6 @@ export default function PesananDetail() {
             </div>
           )}
 
-          {/* Bukti Pembayaran (jika sudah diunggah) */}
           {!isPaymentPending && order.bukti_pembayaran && (
             <div className="border-t pt-4 mt-4">
               <h2 className="text-lg font-semibold mb-2">Bukti Pembayaran</h2>
@@ -161,7 +159,6 @@ export default function PesananDetail() {
             </div>
           )}
 
-          {/* Rincian Sub-Pesanan */}
           <div className="border-t pt-4 mt-4">
             <h2 className="text-lg font-semibold mb-2">Rincian Pesanan</h2>
             {order.sub_pesanan.map(subOrder => (
@@ -183,7 +180,6 @@ export default function PesananDetail() {
             ))}
           </div>
 
-          {/* Alamat Pengiriman */}
           <div className="border-t pt-4 mt-4">
             <h2 className="text-lg font-semibold mb-2">Alamat Pengiriman</h2>
             <div className="text-sm text-gray-700">

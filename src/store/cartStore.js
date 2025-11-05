@@ -1,17 +1,16 @@
 /**
  * LOKASI FILE: src/store/cartStore.js
  * PERBAIKAN: 
- * 1. Mengembalikan ke `export const` (bukan default). Ini adalah error kritis.
- * 2. Mengganti nama state dari 'items' menjadi 'cart' agar konsisten dengan authStore.
- * 3. Menambahkan null check ( `cart?.reduce` ) di helper untuk SSR.
- * 4. Menambahkan `toast.error` pada `debouncedSyncCart` agar error
- * sinkronisasi di latar belakang terlihat oleh user.
+ * 1. Mengubah `export default` menjadi `export const`.
+ * 2. Mengganti nama state dari 'items' menjadi 'cart'.
+ * 3. Menambahkan null check ( `(cart || []).reduce` ) untuk keamanan SSR.
+ * 4. Menambahkan `toast.error` pada `debouncedSyncCart`.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { apiSyncMyCart } from '@/lib/api'; 
 import { useAuthStore } from './authStore'; 
-import { toast } from 'react-hot-toast'; // Impor toast
+import { toast } from 'react-hot-toast'; 
 
 // Helper untuk debounce (menunda eksekusi)
 function debounce(func, wait) {
@@ -37,7 +36,7 @@ const debouncedSyncCart = debounce(async (cart) => {
       await apiSyncMyCart(cart); 
     } catch (error) {
       console.error("Gagal sinkronisasi keranjang (debounced):", error);
-      // PERUBAHAN: Tampilkan error ke user
+      // PERBAIKAN: Tampilkan error ke user
       toast.error(`Gagal sinkronisasi keranjang: ${error.message}`);
     }
   }
@@ -57,7 +56,7 @@ export const useCartStore = create( // PERBAIKAN: 'export const'
           price: variation ? variation.harga_variasi : product.harga_dasar,
           quantity,
           image: product.gambar_unggulan?.thumbnail || product.galeri_foto?.[0]?.thumbnail || 'https://placehold.co/100x100/f4f4f5/a1a1aa?text=Sadesa',
-          variation: variation ? { id: variation.id, deskripsi: variation.deskripsi } : null, // PERBAIKAN: variation.deskripsi
+          variation: variation ? { id: variation.id, deskripsi: variation.deskripsi } : null,
           toko: product.toko, 
           sellerId: product.toko.id_pedagang, 
         };
