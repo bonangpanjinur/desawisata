@@ -2,19 +2,38 @@
 // PERBAIKAN: Menyesuaikan akses data dengan API & memperbaiki link Gmaps
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { apiFetch } from '@/lib/api';
+import { apiGetWisataDetail, apiGetWisata } from '@/lib/api'; // Perbaikan: Impor spesifik
 import { IconMapPin, IconInfo } from '@/components/icons';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { formatCurrency } from '@/lib/utils'; // Impor formatCurrency
 
 const placeholderImg = "https://placehold.co/600x400/f4f4f5/a1a1aa?text=Wisata";
 
-export async function getServerSideProps(context) {
-  const { slug } = context.params;
+export async function getStaticPaths() {
+  let wisata = [];
   try {
-    const wisata = await apiFetch(`/wisata/slug/${slug}`);
-    return { props: { wisata } };
+    const data = await apiGetWisata({ per_page: 20 }); 
+    wisata = data.data || [];
+  } catch (error) {
+    console.error("Gagal fetch paths wisata:", error);
+  }
+  
+  const paths = wisata.map(w => ({
+    params: { slug: w.slug },
+  }));
+
+  return { paths, fallback: 'blocking' };
+}
+
+export async function getStaticProps({ params }) {
+  try {
+    const wisata = await apiGetWisataDetail(params.slug);
+    return { 
+      props: { wisata },
+      revalidate: 60,
+    };
   } catch (error) {
     console.error("Gagal fetch data wisata:", error);
     return { notFound: true };
@@ -34,8 +53,17 @@ export default function WisataDetailPage({ wisata }) {
   const namaDesa = wisata.desa?.nama_desa;
   const idDesa = wisata.desa?.id;
   const alamatLengkap = wisata.lokasi?.alamat || (namaDesa ? `Desa ${namaDesa}` : 'Lokasi');
-  const hargaTiket = wisata.info?.harga_tiket || 0;
+  const hargaTiketText = wisata.info?.harga_tiket || 'Info';
   const koordinat = wisata.lokasi?.koordinat; // Ini adalah string "lat,lng"
+
+  let displayHarga = hargaTiketText;
+  if (hargaTiketText && !isNaN(Number(hargaTiketText))) {
+      displayHarga = formatCurrency(Number(hargaTiketText));
+  }
+  if (String(hargaTiketText).toLowerCase() === 'gratis' || Number(hargaTiketText) === 0) {
+      displayHarga = 'Gratis';
+  }
+
 
   return (
     <Layout>
@@ -52,18 +80,17 @@ export default function WisataDetailPage({ wisata }) {
         </div>
 
         {idDesa && namaDesa && (
-          <Link href={`/desa/${idDesa}`}>
-            <div className="mb-4 flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50">
+          <Link href={`/desa/${idDesa}`} className="mb-4 flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
-                <IconMapPin className="h-6 w-6" />
+                {/* Ganti ikon jika ada */}
+                <IconMapPin className="h-6 w-6" /> 
               </div>
               <div>
                 <h3 className="font-semibold text-primary">{namaDesa}</h3>
                 <p className="flex items-center gap-1 text-sm text-gray-500">
-                  {alamatLengkap}
+                  Lihat Detail Desa
                 </p>
               </div>
-            </div>
           </Link>
         )}
 
@@ -75,11 +102,8 @@ export default function WisataDetailPage({ wisata }) {
         </div>
 
         <p className="mb-4 text-3xl font-bold text-primary">
-          {typeof hargaTiket === 'number' && hargaTiket > 0 
-            ? `Rp ${hargaTiket.toLocaleString('id-ID')}`
-            : (typeof hargaTiket === 'string' ? hargaTiket : 'Gratis')
-          }
-          {typeof hargaTiket === 'number' && <span className="text-base font-normal text-gray-500"> / orang</span>}
+          {displayHarga}
+          {typeof hargaTiketText === 'number' && hargaTiketText > 0 && <span className="text-base font-normal text-gray-500"> / orang</span>}
         </p>
         
         <div className="flex gap-4 mb-6">

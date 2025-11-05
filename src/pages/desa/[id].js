@@ -4,14 +4,15 @@ import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ProductCard from '@/components/ProductCard';
 import WisataCard from '@/components/WisataCard'; 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiGetDesaDetail } from '@/lib/api'; // PERBAIKAN: Impor spesifik
 import { IconMapPin } from '@/components/icons';
 import { useRouter } from 'next/router';
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
   try {
-    const data = await apiFetch(`/desa/${id}`);
+    // PERBAIKAN: Gunakan apiGetDesaDetail
+    const data = await apiGetDesaDetail(id);
     
     return { 
       props: { 
@@ -63,7 +64,7 @@ export default function DesaDetailPage({ desa, products, wisata }) {
             </div>
           </div>
           
-          <p className="prose prose-sm mt-4 text-gray-700">{desa.deskripsi || "Desa ini belum memiliki deskripsi."}</p>
+          <div className="prose prose-sm mt-4 text-gray-700" dangerouslySetInnerHTML={{ __html: desa.deskripsi || "Desa ini belum memiliki deskripsi." }} />
         </div>
       </div>
 

@@ -36,7 +36,8 @@ export default function CheckoutPage() {
       router.push('/akun?redirect=/checkout');
       return; 
     }
-    if (cart.length === 0 && !loadingOrder) { 
+    // Cek keranjang HANYA jika tidak sedang dalam proses loading order
+    if ((!cart || cart.length === 0) && !loadingOrder) { 
       toast.error("Keranjang Anda kosong.");
       router.push('/keranjang');
     }
@@ -70,7 +71,7 @@ export default function CheckoutPage() {
 
   // 3. Hitung ongkir setiap kali alamat atau keranjang berubah
   useEffect(() => {
-    if (!selectedAlamat || cart.length === 0) {
+    if (!selectedAlamat || !cart || cart.length === 0) {
       setShippingOptions({});
       return;
     }
@@ -154,7 +155,10 @@ export default function CheckoutPage() {
   // 5. Cek kesiapan order
   const isOrderReady = () => {
     if (!selectedAlamat || loadingAddress || loadingShipping || loadingOrder) return false;
-    if (cart.length > 0 && Object.keys(sellerShippingChoices).length === 0) return false;
+    if (!cart || cart.length === 0) return false;
+    // Cek jika shippingOptions sudah terisi untuk semua seller
+    if (Object.keys(sellerShippingChoices).length !== Object.keys(groupedCart).length) return false;
+    
     return Object.values(sellerShippingChoices).every(choice => choice.metode !== 'tidak_tersedia');
   };
 
@@ -173,6 +177,7 @@ export default function CheckoutPage() {
       quantity: item.quantity,
       price: item.price,
       seller_id: item.sellerId,
+      // Data snapshot (nama, dll) akan diambil backend dari cart.php
     }));
 
     const orderData = {
@@ -196,6 +201,17 @@ export default function CheckoutPage() {
       setLoadingOrder(false); 
     } 
   };
+  
+  // Tambahkan cek cart di awal render
+  if (!cart || cart.length === 0) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <LoadingSpinner />
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -227,7 +243,7 @@ export default function CheckoutPage() {
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Opsi Pengiriman</h2>
+              <h2 className="text-xl font-semibold mb-4">Opsi Pengiriman (Otomatis Termurah)</h2>
               {loadingShipping ? (
                 <LoadingSpinner />
               ) : (
@@ -240,26 +256,16 @@ export default function CheckoutPage() {
                     return (
                       <div key={sellerId}>
                         <h3 className="font-semibold">{seller.nama_toko}</h3>
-                        {options.length > 0 ? (
-                          options.map(opt => (
-                            <div key={opt.metode} className="flex justify-between items-center text-sm ml-2">
+                        {selectedChoice ? (
+                            <div className="flex justify-between items-center text-sm ml-2">
                               <span>
-                                <input 
-                                  type="radio" 
-                                  name={`shipping_${sellerId}`} 
-                                  value={opt.metode}
-                                  checked={selectedChoice?.metode === opt.metode}
-                                  readOnly // Gunakan readOnly
-                                  disabled // Nonaktifkan pilihan manual
-                                  className="mr-2"
-                                />
-                                {opt.nama}
+                                <input type="radio" checked readOnly className="mr-2" />
+                                {options.find(o => o.metode === selectedChoice.metode)?.nama || selectedChoice.metode}
                               </span>
-                              <span className={opt.harga === null ? 'text-red-600' : ''}>
-                                {opt.harga === null ? 'Tidak Tersedia' : `Rp ${formatCurrency(opt.harga)}`}
+                              <span className={selectedChoice.harga === null ? 'text-red-600' : ''}>
+                                {selectedChoice.harga === null ? 'Tidak Tersedia' : `Rp ${formatCurrency(selectedChoice.harga)}`}
                               </span>
                             </div>
-                          ))
                         ) : (
                           <p className="text-sm text-gray-500 ml-2">Menghitung ongkir...</p>
                         )}
@@ -277,7 +283,7 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-semibold mb-4">Ringkasan Pesanan</h2>
               
               <div className="mb-4 max-h-60 overflow-y-auto pr-2">
-                {cart.map(item => (
+                {(cart || []).map(item => (
                   <div key={item.id} className="flex justify-between items-center mb-2">
                     <div>
                       <p className="font-medium">{item.name} <span className="text-gray-600">x {item.quantity}</span></p>
@@ -321,7 +327,7 @@ export default function CheckoutPage() {
                 )}
               </button>
               
-              {!isOrderReady() && !loadingAddress && !loadingShipping && !loadingOrder && cart.length > 0 && (
+              {!isOrderReady() && !loadingAddress && !loadingShipping && !loadingOrder && cart && cart.length > 0 && (
                 <p className="text-red-600 text-sm mt-2 text-center">
                   Tidak dapat melanjutkan. Pastikan alamat dipilih dan pengiriman tersedia untuk semua toko.
                 </p>

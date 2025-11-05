@@ -24,7 +24,7 @@ export default function WisataCard({ wisata }) {
   if (hargaTiketText && !isNaN(Number(hargaTiketText))) {
       displayHarga = formatCurrency(Number(hargaTiketText));
   }
-  if (hargaTiketText.toLowerCase() === 'gratis') {
+  if (String(hargaTiketText).toLowerCase() === 'gratis' || Number(hargaTiketText) === 0) {
       displayHarga = 'Gratis';
   }
 

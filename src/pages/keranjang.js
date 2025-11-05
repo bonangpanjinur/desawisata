@@ -38,7 +38,7 @@ export default function KeranjangPage() {
       <h1 className="text-3xl font-bold mb-6">Keranjang Belanja</h1>
       
       {/* PERBAIKAN: Gunakan (cart || []).length */}
-      {(cart || []).length === 0 ? (
+      {(!cart || cart.length === 0) ? (
         <div className="text-center py-10">
           <IconCart className="mx-auto h-24 w-24 text-gray-300" />
           <p className="mt-4 text-lg text-gray-500">Keranjang Anda kosong.</p>

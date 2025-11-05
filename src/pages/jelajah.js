@@ -28,6 +28,13 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
+// Helper untuk mengambil data dengan aman
+const safeGetData = (response) => {
+  if (Array.isArray(response)) return response;
+  return response?.data || [];
+};
+
+
 export async function getServerSideProps() {
   try {
     const [kategoriProdukData, desaData, kategoriWisataData] = await Promise.all([
@@ -37,9 +44,9 @@ export async function getServerSideProps() {
     ]);
     return {
       props: {
-        filterKategoriProduk: kategoriProdukData || [],
-        filterKategoriWisata: kategoriWisataData || [],
-        filterDesa: desaData.data || [], 
+        filterKategoriProduk: safeGetData(kategoriProdukData),
+        filterKategoriWisata: safeGetData(kategoriWisataData),
+        filterDesa: safeGetData(desaData), 
       },
     };
   } catch (error) {
@@ -51,8 +58,7 @@ export async function getServerSideProps() {
 // Komponen Card Desa (untuk hasil pencarian)
 function DesaCard({ desa }) {
   return (
-    <Link href={`/desa/${desa.id}`}>
-      <div className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg col-span-1">
+    <Link href={`/desa/${desa.id}`} className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg col-span-1">
         <img
           src={desa.foto || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
           alt={desa.nama_desa}
@@ -66,7 +72,6 @@ function DesaCard({ desa }) {
             {desa.kabupaten}, {desa.provinsi}
           </p>
         </div>
-      </div>
     </Link>
   );
 }
@@ -116,7 +121,7 @@ export default function JelajahPage({ filterKategoriProduk, filterKategoriWisata
         }
         
         const data = await fetchFunction(params);
-        setResults(data.data || []);
+        setResults(safeGetData(data));
       } catch (error) {
         console.error(`Gagal fetch ${tipe}:`, error);
         // PERBAIKAN: Tampilkan error ke user

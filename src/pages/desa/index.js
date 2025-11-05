@@ -63,6 +63,7 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
         }
     };
     
+    // Gunakan debounce sederhana
     const timer = setTimeout(filterData, 300);
     return () => clearTimeout(timer);
 
@@ -109,8 +110,7 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {filteredDesa.length > 0 ? (
               filteredDesa.map(d => (
-                <Link key={d.id} href={`/desa/${d.id}`}>
-                  <div className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg">
+                <Link key={d.id} href={`/desa/${d.id}`} className="flex cursor-pointer items-center gap-4 rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg">
                     <img
                       src={d.foto || 'https://placehold.co/100x100/e2e8f0/a1a1aa?text=Desa'}
                       alt={d.nama_desa}
@@ -124,7 +124,6 @@ export default function DesaIndexPage({ allDesa, filterProvinsi }) {
                         {d.kabupaten}, {d.provinsi}
                       </p>
                     </div>
-                  </div>
                 </Link>
               ))
             ) : (

@@ -9,10 +9,10 @@ import { useAuthStore } from '@/store/authStore'; // <-- PERBAIKAN: Impor bernam
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { apiRegister, apiUpdateProfile } from '@/lib/api'; // PERBAIKAN: Impor apiRegister
+import { apiRegister } from '@/lib/api'; // PERBAIKAN: Impor apiRegister
 import { toast } from 'react-hot-toast'; 
 import LoadingSpinner from '@/components/LoadingSpinner'; 
-import { IconEye, IconEyeOff } from '@/components/icons'; // PERBAIKAN: Impor ikon
+import { IconEye, IconEyeOff, IconUser, IconPackage, IconLogOut } from '@/components/icons'; // PERBAIKAN: Impor ikon
 
 export default function Akun() {
   const router = useRouter();
@@ -37,6 +37,7 @@ export default function Akun() {
         email: user.email || '',
       });
     } else {
+      // Jika tidak ada user, paksa ke tab login
       setIsLogin(true);
     }
   }, [user]);
@@ -50,7 +51,7 @@ export default function Akun() {
       const data = await login(username, password); 
       if (data) {
         toast.success('Login berhasil!');
-        const redirectPath = router.query.redirect || '/';
+        const redirectPath = router.query.redirect || '/akun'; // Redirect ke /akun setelah login
         router.push(redirectPath);
       }
     } catch (error) {
@@ -113,56 +114,47 @@ export default function Akun() {
     return (
       <Layout>
         <div className="container mx-auto p-4 max-w-lg">
-          <h1 className="text-3xl font-bold mb-6 text-center">Akun Saya</h1>
-          <p className="text-center mb-4">
-            Halo, <strong>{user.display_name}</strong> ({user.email})
-          </p>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
+              <IconUser size={40} className="text-gray-500" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{user.display_name}</h1>
+              <p className="text-gray-600">{user.email}</p>
+            </div>
+          </div>
 
-          <form onSubmit={handleUpdateProfile} className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Edit Profil</h2>
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2" htmlFor="displayName">
-                Nama Tampilan
-              </label>
-              <input
-                type="text"
-                id="displayName"
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                value={editData.displayName}
-                onChange={(e) => setEditData({ ...editData, displayName: e.target.value })}
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2" htmlFor="emailDisplay">
-                Email (read-only)
-              </label>
-              <input
-                type="email"
-                id="emailDisplay"
-                className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-                value={editData.email}
-                readOnly
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
+          {/* Menu Akun */}
+          <div className="bg-white rounded-lg shadow-md divide-y">
+            <Link href="/akun?tab=pesanan" className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer">
+              <div className="flex items-center gap-3">
+                <IconPackage className="text-primary" />
+                <span className="font-semibold">Pesanan Saya</span>
+              </div>
+            </Link>
+            <Link href="/akun?tab=alamat" className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer">
+              <div className="flex items-center gap-3">
+                <IconMapPin className="text-primary" />
+                <span className="font-semibold">Alamat Pengiriman</span>
+              </div>
+            </Link>
+            <div 
+              onClick={() => {
+                logout();
+                toast.success('Logout berhasil.');
+                router.push('/');
+              }}
+              className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer text-red-600"
             >
-              {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </button>
-          </form>
+              <div className="flex items-center gap-3">
+                <IconLogOut />
+                <span className="font-semibold">Logout</span>
+              </div>
+            </div>
+          </div>
 
-          <button
-            onClick={() => {
-              logout();
-              toast.success('Logout berhasil.');
-              router.push('/');
-            }}
-            className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition duration-300 mt-6"
-          >
-            Logout
-          </button>
+          {/* TODO: Tampilkan konten berdasarkan router.query.tab (misal: daftar pesanan) */}
+
         </div>
       </Layout>
     );
@@ -230,7 +222,7 @@ export default function Akun() {
                 disabled={loading}
                 className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
               >
-                {loading ? <LoadingSpinner /> : 'Login'}
+                {loading ? 'Loading...' : 'Login'}
               </button>
             </form>
           ) : (
@@ -301,7 +293,7 @@ export default function Akun() {
                 disabled={loading}
                 className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition duration-300 disabled:bg-gray-400"
               >
-                {loading ? <LoadingSpinner /> : 'Daftar'}
+                {loading ? 'Mendaftar...' : 'Daftar'}
               </button>
             </form>
           )}

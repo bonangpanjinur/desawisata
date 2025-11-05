@@ -3,6 +3,7 @@
  * PERBAIKAN: 
  * 1. Menambahkan 'apiGetProduk' ke dalam import dari '@/lib/api'
  * untuk memperbaiki error 'apiGetProduk is not defined' di getStaticPaths.
+ * 2. Menambahkan unoptimized={true} pada Image
  */
 import { useState } from 'react';
 import { useRouter } from 'next/router';
@@ -10,10 +11,11 @@ import { useRouter } from 'next/router';
 import { apiGetProdukDetail, apiGetReviews, apiGetProduk } from '@/lib/api'; 
 import Layout from '@/components/Layout';
 import { formatCurrency } from '@/lib/utils';
-import { useCartStore } from '@/store/cartStore'; 
+import { useCartStore } from '@/store/cartStore'; // Impor bernama
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { Star } from 'lucide-react';
+import { Star, ShoppingCart } from 'lucide-react';
+import Image from 'next/image'; // Impor Next Image
 
 export default function ProductDetail({ product, reviews }) {
   const router = useRouter();
@@ -38,6 +40,7 @@ export default function ProductDetail({ product, reviews }) {
 
   const hasVariations = product.variasi && product.variasi.length > 0;
   const mainImage = product.gambar_unggulan?.large || product.galeri_foto?.[0]?.large || 'https://placehold.co/600x600/f4f4f5/a1a1aa?text=Produk';
+  const placeholderImg = 'https://placehold.co/600x600/f4f4f5/a1a1aa?text=Produk';
 
   const handleAddToCart = () => {
     if (loading) return; 
@@ -87,14 +90,21 @@ export default function ProductDetail({ product, reviews }) {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="md:flex">
             {/* Kolom Gambar */}
-            <div className="md:w-1/2">
-              <img src={mainImage} alt={product.nama_produk} className="w-full h-64 md:h-[450px] object-cover" onError={(e) => (e.target.src = 'https://placehold.co/600x600/f4f4f5/a1a1aa?text=Produk')}/>
+            <div className="md:w-1/2 relative h-64 md:h-[450px] bg-gray-100">
+              <Image 
+                src={mainImage} 
+                alt={product.nama_produk} 
+                layout="fill"
+                objectFit="cover"
+                unoptimized={true} // PERBAIKAN
+                onError={(e) => (e.target.src = placeholderImg)}
+              />
             </div>
 
             {/* Kolom Info */}
             <div className="md:w-1/2 p-6 flex flex-col justify-between">
               <div>
-                <a onClick={() => router.push(`/toko/${product.toko.id_pedagang}`)} className="text-sm text-primary hover:underline cursor-pointer">{product.toko.nama_toko}</a>
+                <span onClick={() => router.push(`/toko/${product.toko.id_pedagang}`)} className="text-sm text-primary hover:underline cursor-pointer">{product.toko.nama_toko}</span>
                 <h1 className="text-3xl font-bold mt-1 mb-2">{product.nama_produk}</h1>
                 
                 <div className="flex items-center mb-4">
@@ -107,7 +117,7 @@ export default function ProductDetail({ product, reviews }) {
                   {displayPrice !== null ? (
                     <>
                       {hasVariations && !selectedVariation && <span className="text-lg text-gray-500 font-normal">Mulai </span>}
-                      {`Rp ${formatCurrency(displayPrice)}`}
+                      {formatCurrency(displayPrice)}
                     </>
                   ) : (
                     <span className="text-xl">Pilih variasi untuk harga</span>
@@ -126,7 +136,7 @@ export default function ProductDetail({ product, reviews }) {
                       <option value="">-- Pilih --</option>
                       {product.variasi.map(v => (
                         <option key={v.id} value={v.id}>
-                          {v.deskripsi} (Rp {formatCurrency(v.harga_variasi)})
+                          {v.deskripsi} ({formatCurrency(v.harga_variasi)})
                         </option>
                       ))}
                     </select>
@@ -150,13 +160,12 @@ export default function ProductDetail({ product, reviews }) {
                 <button
                   onClick={handleAddToCart}
                   disabled={loading || (hasVariations && !selectedVariation)}
-                  className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <span className="flex items-center justify-center">
-                      <LoadingSpinner /> Menambahkan...
-                    </span>
-                  ) : "Tambah ke Keranjang"}
+                    <LoadingSpinner /> 
+                  ) : <ShoppingCart size={20} />}
+                  {loading ? 'Menambahkan...' : 'Tambah ke Keranjang'}
                 </button>
               </div>
             </div>
@@ -204,7 +213,7 @@ export async function getStaticPaths() {
   try {
     // PERBAIKAN: apiGetProduk sekarang sudah diimpor
     const data = await apiGetProduk({ per_page: 20 }); 
-    products = data.data;
+    products = data.data || [];
   } catch (error) {
     console.error("Gagal fetch paths produk:", error);
   }

@@ -4,6 +4,7 @@
  * 1. Mengganti nama impor 'apiGetOrderDetail' menjadi 'apiGetMyOrderDetail'.
  * 2. Mengubah format `toast.error`.
  * 3. Mengubah impor authStore menjadi impor bernama.
+ * 4. Memperbaiki instruksi pembayaran (placeholder).
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -13,11 +14,12 @@ import { apiGetMyOrderDetail, apiUploadFile, apiConfirmPayment } from '@/lib/api
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { IconFileUpload } from '@/components/icons';
 
 export default function PesananDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const { user, token } = useAuthStore(); // PERBAIKAN: Panggil sebagai fungsi
+  const { user, token } = useAuthStore();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState(null);
@@ -109,6 +111,7 @@ export default function PesananDetail() {
   }
 
   const isPaymentPending = order.status_transaksi === 'menunggu_pembayaran';
+  const isPaymentConfirmed = order.status_transaksi === 'pembayaran_dikonfirmasi';
 
   return (
     <Layout>
@@ -117,7 +120,7 @@ export default function PesananDetail() {
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="mb-4">
-            <p><strong>Status:</strong> <span className={`font-semibold ${isPaymentPending ? 'text-yellow-600' : 'text-green-600'}`}>{order.status_transaksi.replace('_', ' ')}</span></p>
+            <p><strong>Status:</strong> <span className={`font-semibold ${isPaymentPending ? 'text-yellow-600' : 'text-green-600'}`}>{order.status_transaksi.replace(/_/g, ' ')}</span></p>
             <p><strong>Tanggal:</strong> {new Date(order.tanggal_transaksi).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             <p className="text-xl font-bold mt-2">Total: {formatCurrency(order.total_transaksi)}</p>
           </div>
@@ -126,36 +129,60 @@ export default function PesananDetail() {
             <div className="border-t pt-4 mt-4">
               <h2 className="text-lg font-semibold mb-2">Instruksi Pembayaran</h2>
               <p>Silakan transfer sejumlah <strong>{formatCurrency(order.total_transaksi)}</strong> ke rekening berikut:</p>
+              
+              {/* PERBAIKAN: Instruksi Pembayaran (Placeholder) */}
               <div className="my-2 p-3 bg-gray-100 rounded">
-                <p><strong>Bank BCA:</strong> 123456789 (a/n Desa Wisata)</p>
-                <p><strong>Bank Mandiri:</strong> 987654321 (a/n Desa Wisata)</p>
+                <p className="font-semibold">Bank BCA</p>
+                <p>No. Rek: <strong>1234567890</strong></p>
+                <p>a/n <strong>Sadesa Indonesia</strong></p>
               </div>
+              <div className="my-2 p-3 bg-gray-100 rounded">
+                <p className="font-semibold">Bank Mandiri</p>
+                <p>No. Rek: <strong>0987654321</strong></p>
+                <p>a/n <strong>Sadesa Indonesia</strong></p>
+              </div>
+              {/* AKHIR PERBAIKAN */}
+              
               <p className="text-red-600 font-medium">PENTING: Harap unggah bukti transfer Anda untuk verifikasi.</p>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Bukti Transfer (JPG/PNG)</label>
+                <label htmlFor="file-upload" className="w-full cursor-pointer bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-gray-200">
+                  <IconFileUpload className="text-gray-500" size={32} />
+                  <span className="text-sm text-gray-600">{file ? file.name : 'Pilih file (JPG/PNG)'}</span>
+                </label>
                 <input 
+                  id="file-upload"
                   type="file" 
                   onChange={handleFileChange} 
                   accept="image/png, image/jpeg"
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="hidden"
                 />
               </div>
 
               <button
                 onClick={handleUploadAndConfirm}
                 disabled={uploading || confirming || !file}
-                className="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg mt-4 hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-white font-bold py-2 px-4 rounded-lg mt-4 hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {uploading ? 'Mengunggah...' : (confirming ? 'Mengonfirmasi...' : 'Konfirmasi Pembayaran')}
               </button>
             </div>
           )}
 
+          {isPaymentConfirmed && (
+             <div className="border-t pt-4 mt-4 text-center p-4 bg-green-50 rounded-lg">
+                <IconCheckCircle className="text-green-600 mx-auto" size={40} />
+                <h2 className="text-lg font-semibold mt-2 text-green-700">Pembayaran Terkonfirmasi</h2>
+                <p className="text-gray-600 text-sm">Pembayaran Anda sedang diverifikasi oleh penjual. Mohon tunggu.</p>
+             </div>
+          )}
+
           {!isPaymentPending && order.bukti_pembayaran && (
             <div className="border-t pt-4 mt-4">
               <h2 className="text-lg font-semibold mb-2">Bukti Pembayaran</h2>
-              <img src={order.bukti_pembayaran} alt="Bukti Pembayaran" className="max-w-xs rounded-md shadow-sm" />
+              <a href={order.bukti_pembayaran} target="_blank" rel="noopener noreferrer">
+                <img src={order.bukti_pembayaran} alt="Bukti Pembayaran" className="max-w-xs rounded-md shadow-sm border" />
+              </a>
             </div>
           )}
 
@@ -164,8 +191,8 @@ export default function PesananDetail() {
             {order.sub_pesanan.map(subOrder => (
               <div key={subOrder.id} className="mb-4 border-b pb-4">
                 <h3 className="font-semibold text-gray-800">Toko: {subOrder.nama_toko}</h3>
-                <p className="text-sm text-gray-600">Status Toko: {subOrder.status_pesanan.replace('_', ' ')}</p>
-                <p className="text-sm text-gray-600">Metode Pengiriman: {subOrder.metode_pengiriman.replace('_', ' ')}</p>
+                <p className="text-sm text-gray-600">Status Toko: {subOrder.status_pesanan.replace(/_/g, ' ')}</p>
+                <p className="text-sm text-gray-600">Metode Pengiriman: {subOrder.metode_pengiriman.replace(/_/g, ' ')}</p>
                 <p className="text-sm text-gray-600">Ongkir Toko Ini: {formatCurrency(subOrder.ongkir)}</p>
                 
                 <ul className="mt-2 list-disc list-inside space-y-1">

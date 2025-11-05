@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'; // PERBAIKAN: Import
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { IconSearch, IconCart, IconChevronLeft } from './icons';
-import { useCartStore } from '@/store/cartStore';
+import { useCartStore } from '@/store/cartStore'; // PERBAIKAN: Impor bernama
 
 export default function Header({ title }) { // PERBAIKAN: Terima 'title'
   const router = useRouter();
@@ -49,7 +49,15 @@ export default function Header({ title }) { // PERBAIKAN: Terima 'title'
           <span className="text-lg font-semibold truncate">
             {pageTitle}
           </span>
-          <div className="w-8"></div> 
+          {/* PERBAIKAN: Tambah keranjang di halaman detail */}
+          <Link href="/keranjang" className="relative p-2">
+              <IconCart className="h-6 w-6" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                </span>
+              )}
+          </Link>
         </div>
       </header>
     );

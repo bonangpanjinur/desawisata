@@ -1,18 +1,20 @@
 /**
  * LOKASI FILE: src/lib/api.js
  * PERBAIKAN UTAMA:
- * 1. MENGGANTI 'dwl/v1' menjadi 'dw/v1' di BASE_URL. Ini adalah penyebab 404.
- * 2. Menambahkan INTERCEPTOR RESPON ERROR untuk menampilkan pesan error dari backend
+ * 1. MENGGANTI 'BASE_URL' ke domain backend Anda: 'admin.bonang.my.id'.
+ * 2. MENGGANTI 'dwl/v1' menjadi 'dw/v1' di BASE_URL. Ini adalah penyebab 404.
+ * 3. Menambahkan INTERCEPTOR RESPON ERROR untuk menampilkan pesan error dari backend
  * sebagai toast, alih-alih hanya menampilkan layar kosong.
- * 3. Menambahkan 'export' yang hilang.
- * 4. Menambahkan fungsi-fungsi API yang hilang (e.g., apiGetPublicSettings, apiGetReviews, dll).
+ * 4. Menambahkan 'export' yang hilang.
+ * 5. Menambahkan fungsi-fungsi API yang hilang (e.g., apiGetPublicSettings, apiGetReviews, dll).
+ * 6. Memperbaiki payload apiSyncMyCart menjadi { cart: [...] }
  */
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'react-hot-toast';
 
-// PERBAIKAN: Typo 'dwl/v1' diubah menjadi 'dw/v1'
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://admin.bonang.my.id/wp-json/dw/v1';
+// PERBAIKAN: URL diubah ke backend Anda dan namespace 'dw/v1'
+const BASE_URL = 'https://admin.bonang.my.id/wp-json/dw/v1';
 
 export const apiFetch = axios.create({ // PERBAIKAN: export
   baseURL: BASE_URL,
@@ -21,6 +23,7 @@ export const apiFetch = axios.create({ // PERBAIKAN: export
 // Interceptor untuk menambahkan token Auth
 apiFetch.interceptors.request.use(
   (config) => {
+    // Ambil state langsung dari Zustand di dalam interceptor
     const { token } = useAuthStore.getState();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -78,6 +81,7 @@ export const apiLogin = async (username, password) => {
   return data;
 };
 
+// FUNGSI BARU
 export const apiRegister = async (username, email, password, nama_lengkap) => {
   const data = await apiFetch.post('/auth/register', {
     username,
@@ -119,7 +123,7 @@ export const apiGetProduk = async (params) => {
   return data;
 };
 
-// PERBAIKAN: Fungsi ini hilang
+// FUNGSI BARU
 export const apiGetProdukDetail = async (slug) => {
   const data = await apiFetch.get(`/produk/slug/${slug}`);
   return data;
@@ -130,6 +134,7 @@ export const apiGetWisata = async (params) => {
   return data;
 };
 
+// FUNGSI BARU
 export const apiGetWisataDetail = async (slug) => {
   const data = await apiFetch.get(`/wisata/slug/${slug}`);
   return data;
@@ -140,19 +145,20 @@ export const apiGetTokoDetail = async (id, params) => {
   return data;
 };
 
-// PERBAIKAN: Fungsi ini hilang
+// FUNGSI BARU
 export const apiGetPublicSettings = async () => {
   const data = await apiFetch.get('/settings');
   return data;
 };
 
-// PERBAIKAN: Fungsi ini hilang
+// FUNGSI BARU
 export const apiGetReviews = async (target_type, target_id, params) => {
   const data = await apiFetch.get(`/reviews/${target_type}/${target_id}`, { params });
   return data;
 };
 
 // --- ALAMAT (Endpoint baru) ---
+// FUNGSI BARU
 export const apiGetProvinsi = async () => {
   const data = await apiFetch.get('/alamat/provinsi');
   return data;

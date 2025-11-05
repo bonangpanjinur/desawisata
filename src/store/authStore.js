@@ -3,7 +3,7 @@
  * PERBAIKAN:
  * 1. Mengubah `export default` menjadi `export const`.
  * 2. Menyederhanakan `catch` agar error dari interceptor bisa sampai ke halaman.
- * 3. Memperbaiki logika sinkronisasi keranjang.
+ * 3. Memperbaiki logika sinkronisasi keranjang saat login dan logout.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -22,23 +22,26 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           const data = await apiLogin(username, password);
           set({ user: data.user_data, token: data.token });
 
-          // Sinkronisasi Keranjang setelah login
-          const guestCart = useCartStore.getState().cart; // PERBAIKAN: Ambil state 'cart'
+          // --- PERBAIKAN: Sinkronisasi Keranjang setelah login ---
+          const guestCart = useCartStore.getState().cart; // Ambil state 'cart'
           
-          if (guestCart.length > 0) {
+          if (guestCart && guestCart.length > 0) {
             console.log("Menyinkronkan keranjang guest ke server...", guestCart);
             // Kirim guest cart, server akan merge dan mengembalikan cart terbaru
             const syncedCart = await apiSyncMyCart(guestCart); 
-            useCartStore.setState({ cart: syncedCart }); // Update store keranjang dengan data dari server
+            useCartStore.setState({ cart: syncedCart || [] }); // Update store keranjang
           } else {
             console.log("Mengambil keranjang server...");
             // Keranjang guest kosong, ambil keranjang dari server (jika ada)
             const serverCart = await apiGetMyCart();
-            useCartStore.setState({ cart: serverCart });
+            useCartStore.setState({ cart: serverCart || [] });
           }
+          // --- AKHIR PERBAIKAN SINKRONISASI ---
+
           return data; // Kembalikan data agar komponen tahu login sukses
         } catch (error) {
           // PERBAIKAN: Lemparkan error agar ditangkap oleh halaman.
+          // Interceptor di api.js sudah akan menampilkan toast.
           console.error("Login failed in authStore:", error);
           throw error;
         }
@@ -61,12 +64,12 @@ export const useAuthStore = create( // PERBAIKAN: 'export const'
           await apiClearMyCart();
         } catch (error) {
           console.error("Gagal membersihkan keranjang server saat logout:", error);
-          // PERBAIKAN: Tampilkan error ke user
-          toast.error("Gagal membersihkan keranjang server saat logout.");
+          // Tampilkan error ke user
+          toast.error(`Gagal membersihkan keranjang server: ${error.message}`);
         } finally {
           // Selalu logout di client
-          useCartStore.setState({ cart: [] });
           set({ user: null, token: null });
+          useCartStore.setState({ cart: [] });
           // Hapus manual localStorage untuk kedua store
           localStorage.removeItem('cart-storage');
           localStorage.removeItem('auth-storage');

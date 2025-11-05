@@ -59,8 +59,8 @@ export default function ProductCard({ product }) {
         <div className="mt-auto pt-4">
           <p className="text-lg font-bold text-primary">
             {/* PERBAIKAN: Gunakan formatCurrency */}
-            {displayPrice > 0 ? formatCurrency(displayPrice) : 'Gratis'}
-            {hasVariations && <span className="text-xs font-normal text-gray-500"> (mulai dari)</span>}
+            {displayPrice > 0 ? formatCurrency(displayPrice) : (hasVariations ? 'Mulai ' + formatCurrency(0) : 'Gratis')}
+            {hasVariations && displayPrice > 0 && <span className="text-xs font-normal text-gray-500"> (mulai dari)</span>}
           </p>
         </div>
       </div>
